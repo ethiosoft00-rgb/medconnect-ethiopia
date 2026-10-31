@@ -2042,11 +2042,11 @@ function renderEducationGrid() {
       <img src="${e.img}" class="w-full h-32 object-cover">
       <div class="p-3"><h3 class="font-bold text-sm">${e.title}</h3><p class="text-xs text-gray-500">${e.desc}</p></div>
     </div>`).join('');
+}
     <!-- MOBILE FLOATING CONFERENCE BUTTON -->
 <button onclick="startConference()" class="lg:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-full shadow-2xl hover:from-red-600 hover:to-red-700 transition transform active:scale-95 flex items-center justify-center">
     <span class="text-2xl animate-pulse">📹</span>
 </button>
-}
 
 function toggleLike(postId) {
     const btn = document.getElementById(`like-btn-${postId}`);
@@ -2132,6 +2132,13 @@ function messageAuthor(authorId, authorName) {
         selectChatPartner(authorId, authorName, 'Staff');
     }, 300);
 }
+
+// ⬇️ THIS IS THE END OF YOUR JAVASCRIPT ⬇️
 </script>
+
+<!-- ⬇️ THE BUTTON IS NOW OUTSIDE THE SCRIPT TAG ⬇️ -->
+<button onclick="startConference()" class="lg:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-full shadow-2xl hover:from-red-600 hover:to-red-700 transition transform active:scale-95 flex items-center justify-center">
+    <span class="text-2xl animate-pulse">📹</span>
+</button>
 </body>
 </html>
