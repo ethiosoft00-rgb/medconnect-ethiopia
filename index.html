@@ -19,6 +19,7 @@
 .mic-active { animation: pulse-red 1.2s infinite; color: #ef4444 !important; transform: scale(1.1); }
 @keyframes pulse-red { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
+/* ═══════ REAL-IMAGE LOGIN ═══════ */
 .login-bg { position: relative; overflow: hidden; background: #0b1220; }
 .login-slides { position: absolute; inset: 0; z-index: 0; }
 .login-slide { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transform: scale(1.06); animation: loginSlideFade 24s infinite, loginKenBurns 24s infinite; }
@@ -101,7 +102,7 @@
 
 <div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-2"></div>
 
-<!-- LOGIN -->
+<!-- LOGIN SCREEN -->
 <div id="login-screen" class="flex items-center justify-center flex-1 login-bg relative p-4">
   <div class="login-slides"><div class="login-slide"></div><div class="login-slide"></div><div class="login-slide"></div><div class="login-slide"></div></div>
   <div class="login-overlay"></div>
@@ -247,7 +248,7 @@
         </div>
       </div>
 
-      <!-- FEED (Restored completely) -->
+      <!-- FEED (POSTING) -->
       <div id="view-feed" class="view-section fade-in hidden">
         <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border mb-6">
           <div class="flex gap-3">
@@ -273,13 +274,19 @@
         <div id="feed-container" class="space-y-4"></div>
       </div>
 
-      <!-- MESSAGES (Restored completely) -->
+      <!-- MESSAGES (FIXED WITH CALL BUTTON) -->
       <div id="view-messages" class="view-section fade-in hidden h-full flex flex-col">
         <h2 class="text-2xl font-bold mb-4">Secure Messages</h2>
         <div class="bg-white dark:bg-gray-800 flex-1 rounded-2xl shadow-sm border flex overflow-hidden min-h-0">
           <div class="w-1/3 border-r flex flex-col bg-gray-50 dark:bg-gray-800"><div class="p-4 border-b"><h3 class="font-bold text-gray-500 text-xs uppercase">Select Staff</h3></div><div id="chat-staff-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div></div>
           <div class="w-2/3 flex flex-col bg-white dark:bg-gray-900 min-w-0">
-            <div class="p-4 border-b flex justify-between items-center"><div><h3 class="font-bold" id="chat-header-name">Select a contact</h3><p class="text-xs text-gray-500" id="chat-header-role"></p></div><button onclick="sendSMS()" class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">📱 SMS</button></div>
+            <div class="p-4 border-b flex justify-between items-center">
+                <div><h3 class="font-bold" id="chat-header-name">Select a contact</h3><p class="text-xs text-gray-500" id="chat-header-role"></p></div>
+                <div class="flex gap-2">
+                    <button onclick="startDirectCall()" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-200">📹 Call</button>
+                    <button onclick="sendSMS()" class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">📱 SMS</button>
+                </div>
+            </div>
             <div class="flex-1 p-4 overflow-y-auto space-y-4" id="chat-messages-area"></div>
             <div class="p-3 bg-white dark:bg-gray-800 border-t">
               <div class="trans-bar mb-2">
@@ -373,10 +380,7 @@
       <!-- PATIENT RECORDS -->
       <div id="view-patients" class="view-section fade-in hidden">
         <div class="flex justify-between items-center mb-6">
-          <div>
-            <h2 class="text-2xl font-bold">Patient Queue & Records</h2>
-            <p id="queue-role-desc" class="text-sm text-gray-500">Manage patients moving through the hospital.</p>
-          </div>
+          <div><h2 class="text-2xl font-bold">Patient Queue & Records</h2><p id="queue-role-desc" class="text-sm text-gray-500">Manage patients moving through the hospital.</p></div>
           <button id="btn-new-intake" onclick="document.getElementById('intake-form').classList.toggle('hidden')" class="hidden bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md">+ New Patient Intake</button>
         </div>
         <form id="intake-form" class="hidden bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border space-y-3 mb-6 max-w-md">
@@ -394,13 +398,8 @@
         </div>
       </div>
 
-      <!-- SYSTEM HEALTH -->
-      <div id="view-sys-dash" class="view-section fade-in hidden">
-        <h2 class="text-2xl font-bold mb-6">System Health & Status</h2>
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><canvas id="sysChart" height="100"></canvas></div>
-      </div>
-
-      <!-- AUDIT & SETTINGS -->
+      <!-- SYSTEM HEALTH & SETTINGS -->
+      <div id="view-sys-dash" class="view-section fade-in hidden"><h2 class="text-2xl font-bold mb-6">System Health & Status</h2><div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><canvas id="sysChart" height="100"></canvas></div></div>
       <div id="view-audit" class="view-section fade-in hidden"><h2 class="text-2xl font-bold mb-6">System Audit Logs</h2><div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border">Security & Activity Events</div></div>
       <div id="view-sys-settings" class="view-section fade-in hidden"><h2 class="text-2xl font-bold mb-6">Global System Settings</h2><div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border">Settings</div></div>
       <div id="view-settings" class="view-section fade-in hidden">
@@ -413,10 +412,10 @@
       <div id="view-education" class="view-section fade-in hidden"></div>
     </main>
     
-    <!-- RIGHT SIDEBAR -->
+    <!-- RIGHT SIDEBAR (BRANCH CONFERENCE) -->
     <aside class="w-80 hidden lg:block p-6 h-full overflow-y-auto shrink-0 bg-white dark:bg-gray-800 border-l">
-      <button id="start-conf-btn" onclick="startConference()" class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-2xl shadow-lg font-bold text-lg mb-6 flex items-center justify-center gap-2">
-        <span class="animate-pulse">🔴</span> Start Live Conference
+      <button id="start-conf-btn" onclick="startBranchConference()" class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-2xl shadow-lg font-bold text-lg mb-6 flex items-center justify-center gap-2">
+        <span class="animate-pulse">🔴</span> Start Branch Conference
       </button>
       <div class="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 p-5 rounded-2xl border mb-6">
         <img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=400&q=80" class="rounded-xl mb-3 w-full h-32 object-cover">
@@ -443,10 +442,10 @@
     </div>
   </div>
 </div>
-<button onclick="startConference()" class="lg:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-full shadow-2xl flex items-center justify-center"><span class="text-2xl animate-pulse">📹</span></button>
+<button onclick="startBranchConference()" class="lg:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-full shadow-2xl flex items-center justify-center"><span class="text-2xl animate-pulse">📹</span></button>
 <script>
 // ═══════════════════════════════════════════════════════════
-//  CONFIG
+//  CONFIG & SUPABASE INIT
 // ═══════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://fbctinyljiclbulghcrp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiY3RpbnlsamljbGJ1bGdoY3JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTIyNTcsImV4cCI6MjEwODkyODI1N30.Rw98xrSETXMCtZtr_Mmq6ITJoLaQgHBpxDFf9H0XBUU';
@@ -533,25 +532,17 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   const rawId = document.getElementById('login-id').value.trim();
   const email = rawId.includes('@') ? rawId : `${rawId}@medconnect.com`;
   document.getElementById('login-btn').innerText = 'Signing in…';
-  
-  const { data, error } = await db.auth.signInWithPassword({
-    email: email,
-    password: document.getElementById('login-password').value
-  });
-  
+  const { data, error } = await db.auth.signInWithPassword({ email: email, password: document.getElementById('login-password').value });
   if (error) {
     document.getElementById('login-error').innerText = error.message;
     document.getElementById('login-error').classList.remove('hidden');
     document.getElementById('login-btn').innerText = 'Sign In →';
-  } else {
-    initApp(data.user);
-  }
+  } else { initApp(data.user); }
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
   if (chatInterval) clearInterval(chatInterval);
-  await db.auth.signOut();
-  window.location.reload();
+  await db.auth.signOut(); window.location.reload();
 });
 
 async function initApp(user) {
@@ -560,10 +551,8 @@ async function initApp(user) {
     const { data: profile, error } = await db.from('profiles').select(`*, branches(name)`).eq('id', user.id).single();
     if (error || !profile) { showToast('Failed to load profile','error'); return; }
     userProfile = profile;
-    
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app-screen').classList.remove('hidden');
-    
     document.getElementById('sidebar-name').innerText = profile.full_name || 'User';
     document.getElementById('sidebar-role').innerText = (ROLE_LABELS[profile.role] || profile.role || '').toUpperCase().replace('_', ' ');
     document.getElementById('sidebar-avatar').innerText = (profile.full_name || 'U').charAt(0).toUpperCase();
@@ -575,11 +564,9 @@ async function initApp(user) {
     document.getElementById('worker-nav-section').classList.remove('hidden');
 
     if (roleStr === 'admin' || roleStr === 'super_admin') {
-      document.getElementById('sys-admin-nav-section').classList.remove('hidden');
-      switchTab('dashboard');
+      document.getElementById('sys-admin-nav-section').classList.remove('hidden'); switchTab('dashboard');
     } else if (roleStr === 'branch_admin') {
-      document.getElementById('branch-admin-nav-section').classList.remove('hidden');
-      switchTab('users');
+      document.getElementById('branch-admin-nav-section').classList.remove('hidden'); switchTab('users');
     } else {
       document.getElementById('clinical-extras-nav').classList.remove('hidden');
       if (REFERRAL_ROLES.includes(roleStr)) document.getElementById('nav-referrals').style.display = '';
@@ -587,43 +574,44 @@ async function initApp(user) {
       if (SYMPTOM_ROLES.includes(roleStr)) document.getElementById('nav-symptom').style.display = '';
       switchTab('workspace');
     }
-
     try { loadDashboard(); } catch(e) { console.error(e); }
     try { loadFeed(); } catch(e) { console.error(e); }
     try { renderEducationGrid(); } catch(e) { console.error(e); }
     try { initNutrition(); } catch(e) { console.error(e); }
-  } catch(err) { 
-    console.error(err); 
-    showToast('Login error: ' + err.message, 'error'); 
-  }
+  } catch(err) { console.error(err); showToast('Login error: ' + err.message, 'error'); }
 }
 
 // ═══════════════════════════════════════════════════════════
-//  PATIENT REGISTRATION
+//  CONFERENCE LOGIC (INDEPENDENT CALLS)
 // ═══════════════════════════════════════════════════════════
-function openPatientRegister() { document.getElementById('patient-register-modal').classList.remove('hidden'); }
-function closePatientRegister() { document.getElementById('patient-register-modal').classList.add('hidden'); }
+function startConference(customRoomId = null) {
+  document.getElementById('conference-modal').classList.remove('hidden');
+  const roomId = customRoomId || ('MedConnect-' + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15)));
+  document.getElementById('jitsi-iframe').src = `https://meet.systemli.org/${roomId}#config.prejoinPageEnabled=false&config.startWithAudioMuted=true`;
+}
 
-document.getElementById('patient-register-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const btn = document.getElementById('reg-btn'), errEl = document.getElementById('reg-error');
-  errEl.classList.add('hidden'); btn.innerText = 'Creating…'; btn.disabled = true;
-  try {
-    const res = await fetch('/api/public/register-patient', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fullName: document.getElementById('reg-name').value.trim(), phone: document.getElementById('reg-phone').value.trim(), password: document.getElementById('reg-pass').value })
-    });
-    const text = await res.text(); let data;
-    try { data = JSON.parse(text); } catch (err) { throw new Error("Server error. Please check Vercel logs."); }
-    if (!res.ok) throw new Error(data.error || 'Registration failed');
-    showToast(data.message || 'Account created!');
-    closePatientRegister(); e.target.reset();
-  } catch(err) { errEl.innerText = err.message; errEl.classList.remove('hidden'); } finally { btn.innerText = 'Create Account'; btn.disabled = false; }
-});
+function startBranchConference() {
+  if (!userProfile || !userProfile.branch_id) return showToast('You must be assigned to a branch to start a branch meeting.', 'error');
+  const roomId = `MedConnect-Branch-${userProfile.branch_id}`;
+  startConference(roomId);
+  showToast('Joining Branch Conference...', 'info');
+}
+
+function startDirectCall() {
+  if (!chatPartnerId) return showToast('Select a contact from the left first.', 'error');
+  const ids = [currentUser.id, chatPartnerId].sort();
+  const roomId = `MedConnect-Private-${ids[0]}-${ids[1]}`;
+  startConference(roomId);
+  showToast('Connecting to private call...', 'info');
+}
+
+function closeConference() { confStopListen(); document.getElementById('conference-modal').classList.add('hidden'); document.getElementById('jitsi-iframe').src = ''; }
+function confStartListen() { if (confIsListening) return; const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return showToast('Speech recognition not supported','error'); confRecognition = new SR(); confRecognition.continuous = true; confRecognition.interimResults = false; confRecognition.onresult = async (e) => { for (let i = e.resultIndex; i < e.results.length; i++) { if (!e.results[i].isFinal) continue; const original = e.results[i][0].transcript.trim(); if (!original) continue; const targetLang = document.getElementById('conf-target-lang').value; const translated = await translateText(original, targetLang); const box = document.getElementById('conf-transcript'); box.insertAdjacentHTML('beforeend', `<div class="conf-transcript-line" onclick="speakText(this.querySelector('.conf-tr').innerText, document.getElementById('conf-target-lang').value)"><div class="text-xs text-gray-300">${original}</div><div class="mt-1"><span class="conf-lang-pill">${targetLang}</span> <span class="text-white text-sm conf-tr">${translated}</span></div></div>`); box.scrollTop = box.scrollHeight; if (document.getElementById('conf-auto-speak').checked) speakText(translated, targetLang); } }; confRecognition.onend = () => { if (confIsListening) { try { confRecognition.start(); } catch(e) {} } }; confRecognition.onstart = () => { confIsListening = true; document.getElementById('conf-listen-btn').innerText = '🎙️ Listening…'; document.getElementById('conf-listen-btn').classList.add('mic-active'); }; try { confRecognition.start(); } catch(e) { showToast('Recognition error','error'); } }
+function confStopListen() { confIsListening = false; if (confRecognition) { try { confRecognition.stop(); } catch(e) {} } const btn = document.getElementById('conf-listen-btn'); if (btn) { btn.innerText = '🎙️ Listen (V→T)'; btn.classList.remove('mic-active'); } }
+async function confTypedToVoice() { const input = document.getElementById('conf-typed'); const lang = document.getElementById('conf-target-lang').value; if (!input.value) return; const original = input.value; const translated = await translateText(original, lang); speakText(translated, lang); const box = document.getElementById('conf-transcript'); box.insertAdjacentHTML('beforeend', `<div class="conf-transcript-line" onclick="speakText(this.querySelector('.conf-tr').innerText, document.getElementById('conf-target-lang').value)"><div class="text-xs text-gray-300">${original}</div><div class="mt-1"><span class="conf-lang-pill">${lang}</span> <span class="text-white text-sm conf-tr">${translated}</span></div></div>`); box.scrollTop = box.scrollHeight; input.value = ''; }
 
 // ═══════════════════════════════════════════════════════════
-//  PATIENT WORKFLOW
+//  PATIENT WORKFLOW (FIXED DB ERROR)
 // ═══════════════════════════════════════════════════════════
 async function loadDoctorsForAssignment() {
   if (!userProfile.branch_id) return;
@@ -646,7 +634,6 @@ async function loadPatientVisits() {
     if (!userProfile.branch_id) throw new Error("Your account has no Branch ID. Go to Supabase -> profiles and assign a branch.");
     await loadDoctorsForAssignment();
 
-    // FIXED: Removed the failing `profiles:assigned_doctor_id(full_name)` relation. 
     let { data, error } = await db.from('patient_visits').select('*').eq('branch_id', userProfile.branch_id).neq('status', 'Completed').order('created_at', { ascending: false });
     if (error) throw error;
 
@@ -875,12 +862,6 @@ function speakText(text, lang='English') { if (!text) return showToast('Nothing 
 async function translateText(text, targetLang, sourceLang) { if (!text || !text.trim()) return text; const tgt = LANG_SHORT[targetLang] || 'en'; const src = LANG_SHORT[sourceLang] || LANG_SHORT[detectLang(text)] || 'en'; if (src === tgt) return text; try { const res = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, targetLang, sourceLang }) }); const data = await res.json(); if (data.choices?.[0]?.message?.content) return data.choices[0].message.content; if (data.translatedText) return data.translatedText; } catch (e) {} return text; }
 function makeRecognizer({lang='en-US', onFinal, onEnd, onStart}) { const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) { showToast('Speech recognition not supported','error'); return null; } const r = new SR(); r.lang = lang; r.continuous = true; r.interimResults = false; r.onresult = (e) => { let final = ''; for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) final += e.results[i][0].transcript; if (final && onFinal) onFinal(final); }; r.onend = () => { if (onEnd) onEnd(); }; r.onstart = () => { if (onStart) onStart(); }; return r; }
 
-function startConference() { document.getElementById('conference-modal').classList.remove('hidden'); const roomId = 'MedConnect-' + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15)); document.getElementById('jitsi-iframe').src = `https://meet.systemli.org/${roomId}#config.prejoinPageEnabled=false&config.startWithAudioMuted=true`; }
-function closeConference() { confStopListen(); document.getElementById('conference-modal').classList.add('hidden'); document.getElementById('jitsi-iframe').src = ''; }
-function confStartListen() { if (confIsListening) return; const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return showToast('Speech recognition not supported','error'); confRecognition = new SR(); confRecognition.continuous = true; confRecognition.interimResults = false; confRecognition.onresult = async (e) => { for (let i = e.resultIndex; i < e.results.length; i++) { if (!e.results[i].isFinal) continue; const original = e.results[i][0].transcript.trim(); if (!original) continue; const targetLang = document.getElementById('conf-target-lang').value; const translated = await translateText(original, targetLang); const box = document.getElementById('conf-transcript'); box.insertAdjacentHTML('beforeend', `<div class="conf-transcript-line" onclick="speakText(this.querySelector('.conf-tr').innerText, document.getElementById('conf-target-lang').value)"><div class="text-xs text-gray-300">${original}</div><div class="mt-1"><span class="conf-lang-pill">${targetLang}</span> <span class="text-white text-sm conf-tr">${translated}</span></div></div>`); box.scrollTop = box.scrollHeight; if (document.getElementById('conf-auto-speak').checked) speakText(translated, targetLang); } }; confRecognition.onend = () => { if (confIsListening) { try { confRecognition.start(); } catch(e) {} } }; confRecognition.onstart = () => { confIsListening = true; document.getElementById('conf-listen-btn').innerText = '🎙️ Listening…'; document.getElementById('conf-listen-btn').classList.add('mic-active'); }; try { confRecognition.start(); } catch(e) { showToast('Recognition error','error'); } }
-function confStopListen() { confIsListening = false; if (confRecognition) { try { confRecognition.stop(); } catch(e) {} } const btn = document.getElementById('conf-listen-btn'); if (btn) { btn.innerText = '🎙️ Listen (V→T)'; btn.classList.remove('mic-active'); } }
-async function confTypedToVoice() { const input = document.getElementById('conf-typed'); const lang = document.getElementById('conf-target-lang').value; if (!input.value) return; const original = input.value; const translated = await translateText(original, lang); speakText(translated, lang); const box = document.getElementById('conf-transcript'); box.insertAdjacentHTML('beforeend', `<div class="conf-transcript-line" onclick="speakText(this.querySelector('.conf-tr').innerText, document.getElementById('conf-target-lang').value)"><div class="text-xs text-gray-300">${original}</div><div class="mt-1"><span class="conf-lang-pill">${lang}</span> <span class="text-white text-sm conf-tr">${translated}</span></div></div>`); box.scrollTop = box.scrollHeight; input.value = ''; }
-
 async function loadUsersTable() { const isBranchAdmin = String(userProfile.role).toLowerCase().replace(/\s+/g,'_') === 'branch_admin'; const banner = document.getElementById('branch-context-banner'); const staffBranchEl = document.getElementById('staff-branch'); if (isBranchAdmin) { banner.classList.remove('hidden'); document.getElementById('branch-context-name').innerText = userProfile.branches?.name || 'Your Branch'; staffBranchEl.classList.add('hidden'); staffBranchEl.required = false; } else { banner.classList.add('hidden'); staffBranchEl.classList.remove('hidden'); staffBranchEl.required = true; const { data: bData } = await db.from('branches').select('*').order('name'); if (bData) staffBranchEl.innerHTML = '<option value="">Select Branch...</option>'+bData.map(b=>`<option value="${b.id}">${b.name}</option>`).join(''); } document.getElementById('staff-role').innerHTML = (isBranchAdmin?BRANCH_WORKER_ROLES:SYSTEM_ROLES).map(r=>`<option value="${r}">${ROLE_LABELS[r]||r}</option>`).join(''); let q = db.from('profiles').select('*, branches(name)').order('full_name'); if (isBranchAdmin && userProfile.branch_id) q = q.eq('branch_id', userProfile.branch_id); const { data } = await q; allWorkers = data || []; renderWorkerStats(); renderWorkerTable(); }
 function renderWorkerStats() { const total = allWorkers.length; const byRole = allWorkers.reduce((a,w)=>{a[w.role]=(a[w.role]||0)+1;return a;},{}); const cards=[{l:'Total',v:total,c:'from-blue-500 to-blue-600'},{l:'Doctors',v:(byRole.doctor||0)+(byRole.surgeon||0),c:'from-green-500 to-green-600'},{l:'Nurses',v:(byRole.nurse||0)+(byRole.midwife||0),c:'from-purple-500 to-purple-600'},{l:'Other',v:total-((byRole.doctor||0)+(byRole.surgeon||0)+(byRole.nurse||0)+(byRole.midwife||0)),c:'from-orange-500 to-orange-600'}]; document.getElementById('worker-stats').innerHTML = cards.map(c=>`<div class="bg-gradient-to-br ${c.c} p-4 rounded-2xl shadow-md text-white"><p class="text-xs font-bold opacity-80">${c.l}</p><p class="text-3xl font-extrabold mt-1">${c.v}</p></div>`).join(''); }
 function renderWorkerTable() { const q = (document.getElementById('worker-search')?.value || '').trim().toLowerCase(); const list = q ? allWorkers.filter(w=>(w.full_name||'').toLowerCase().includes(q) || (w.staff_id||'').toLowerCase().includes(q)) : allWorkers; const tbody = document.getElementById('user-table-body'); if (!list.length) { tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500">No workers yet.</td></tr>`; return; } tbody.innerHTML = list.map(u => { const isSelf = u.id === currentUser.id; const canDelete = !isSelf && !['admin','super_admin'].includes(u.role); return `<tr class="hover:bg-gray-50 dark:hover:bg-gray-700"><td class="p-4 font-mono text-sm">${u.staff_id||'N/A'}</td><td class="p-4 font-bold">${u.full_name||'Unknown'}${isSelf?' <span class="text-xs bg-gray-200 px-2 py-0.5 rounded">You</span>':''}</td><td class="p-4"><span class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-bold px-2 py-1 rounded">${(ROLE_LABELS[u.role]||u.role).toUpperCase()}</span></td><td class="p-4 text-right">${canDelete?`<button onclick="deleteWorker('${u.id}','${(u.full_name||'').replace(/'/g,"\\'")}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded text-xs font-bold">🗑️ Delete</button>`:'—'}</td></tr>`; }).join(''); }
@@ -895,11 +876,7 @@ async function loadReferrals() { const { data } = await db.from('referrals').sel
 async function updateRef(id, status) { await db.from('referrals').update({status}).eq('id',id); showToast('Referral updated'); loadReferrals(); }
 document.getElementById('referral-form').addEventListener('submit', async (e) => { e.preventDefault(); const { data: p } = await db.from('patients').insert([{full_name:document.getElementById('ref-patient').value}]).select(); await db.from('referrals').insert([{ patient_id: p[0].id, referring_user_id: currentUser.id, target_department: document.getElementById('ref-dept').value, urgency: document.getElementById('ref-urgency').value, notes: document.getElementById('ref-notes').value, status: 'Submitted' }]); showToast('Referral submitted'); e.target.reset(); loadReferrals(); });
 
-// ═══════════════════════════════════════════════════════════
-//  UTILS
-// ═══════════════════════════════════════════════════════════
-const NUTRI_TOPICS = ['Macronutrients','Vitamins A, B, C, D, E, K','Minerals: Iron, Calcium, Zinc','Ethiopian foods','Malnutrition','Diabetes diet','Hypertension','Pregnancy nutrition','Anemia','Food safety','Obesity','Hydration'];
-let nutriHistory = [];
+const NUTRI_TOPICS = ['Macronutrients','Vitamins A, B, C, D, E, K','Minerals: Iron, Calcium, Zinc','Ethiopian foods','Malnutrition','Diabetes diet','Hypertension','Pregnancy nutrition','Anemia','Food safety','Obesity','Hydration']; let nutriHistory = [];
 function initNutrition() { const listEl = document.getElementById('nutri-topic-list'); if (listEl && !listEl.innerHTML) { listEl.innerHTML = NUTRI_TOPICS.map(t => `<button onclick="askNutrition('${t.replace(/'/g,"\\'")}')" class="w-full text-left text-xs p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 font-medium text-gray-700 dark:text-gray-300">${t}</button>`).join(''); } if (!nutriHistory.length) { const area = document.getElementById('nutri-chat-area'); area.innerHTML = `<div class="nutri-msg-ai p-3 text-sm max-w-[85%]"><p class="font-bold mb-1">👋 Selam! I'm your Nutrition AI Tutor.</p><p>Ask me anything about food & health.</p></div>`; } }
 async function askNutrition(questionOverride) { const input = document.getElementById('nutri-input'); const question = questionOverride || input.value.trim(); if (!question) return; input.value = ''; const area = document.getElementById('nutri-chat-area'); area.insertAdjacentHTML('beforeend', `<div class="flex justify-end"><div class="nutri-msg-user p-3 text-sm max-w-[85%]">${question}</div></div>`); area.scrollTop = area.scrollHeight; area.insertAdjacentHTML('beforeend', `<div class="nutri-msg-ai p-3 text-sm max-w-[85%]" id="nutri-thinking"><span class="animate-pulse">AI is thinking…</span></div>`); area.scrollTop = area.scrollHeight; const prompt = `You are a nutrition educator. Answer in clear terms. Include: (1) what it does, (2) local Ethiopian examples, (3) health problems, (4) practical advice. Under 250 words. Question: ${question}`; try { const res = await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:prompt,targetLang:'English'})}); const data = await res.json(); let answer = data.choices?.[0]?.message?.content || 'Sorry, try again.'; document.getElementById('nutri-thinking').remove(); area.insertAdjacentHTML('beforeend', `<div class="flex justify-start"><div class="nutri-msg-ai p-3 text-sm max-w-[85%]"><p>${answer.replace(/\n/g,'<br>')}</p><div class="flex flex-wrap gap-1 mt-2"><button onclick="speakText(this.closest('.nutri-msg-ai').querySelector('p').innerText, document.getElementById('nutri-lang').value)" class="trans-btn tv">🔊 Listen</button><button onclick="translateNutriAnswer(this)" class="trans-btn tt">🌐 Translate</button></div></div></div>`); nutriHistory.push({q:question, a:answer}); area.scrollTop = area.scrollHeight; } catch(e) { document.getElementById('nutri-thinking')?.remove(); area.insertAdjacentHTML('beforeend', `<div class="nutri-msg-ai p-3 text-sm max-w-[85%] text-red-600">Backend not available.</div>`); } }
 function clearNutriChat() { nutriHistory = []; document.getElementById('nutri-chat-area').innerHTML = ''; initNutrition(); }
