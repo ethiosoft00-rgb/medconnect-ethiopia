@@ -274,7 +274,7 @@
         <div id="feed-container" class="space-y-4"></div>
       </div>
 
-      <!-- MESSAGES (FIXED WITH CALL BUTTON) -->
+      <!-- MESSAGES -->
       <div id="view-messages" class="view-section fade-in hidden h-full flex flex-col">
         <h2 class="text-2xl font-bold mb-4">Secure Messages</h2>
         <div class="bg-white dark:bg-gray-800 flex-1 rounded-2xl shadow-sm border flex overflow-hidden min-h-0">
@@ -414,8 +414,9 @@
     
     <!-- RIGHT SIDEBAR (BRANCH CONFERENCE) -->
     <aside class="w-80 hidden lg:block p-6 h-full overflow-y-auto shrink-0 bg-white dark:bg-gray-800 border-l">
-      <button id="start-conf-btn" onclick="startBranchConference()" class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-2xl shadow-lg font-bold text-lg mb-6 flex items-center justify-center gap-2">
-        <span class="animate-pulse">🔴</span> Start Branch Conference
+      <!-- We change the text to be dynamic based on role -->
+      <button id="start-conf-btn" onclick="handleConferenceBtn()" class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-2xl shadow-lg font-bold text-lg mb-6 flex items-center justify-center gap-2">
+        <span class="animate-pulse">🔴</span> <span id="conf-btn-text">Start Live Conference</span>
       </button>
       <div class="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 p-5 rounded-2xl border mb-6">
         <img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=400&q=80" class="rounded-xl mb-3 w-full h-32 object-cover">
@@ -442,10 +443,10 @@
     </div>
   </div>
 </div>
-<button onclick="startBranchConference()" class="lg:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-full shadow-2xl flex items-center justify-center"><span class="text-2xl animate-pulse">📹</span></button>
+<button onclick="handleConferenceBtn()" class="lg:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-full shadow-2xl flex items-center justify-center"><span class="text-2xl animate-pulse">📹</span></button>
 <script>
 // ═══════════════════════════════════════════════════════════
-//  CONFIG & SUPABASE INIT
+//  CONFIG
 // ═══════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://fbctinyljiclbulghcrp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiY3RpbnlsamljbGJ1bGdoY3JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTIyNTcsImV4cCI6MjEwODkyODI1N30.Rw98xrSETXMCtZtr_Mmq6ITJoLaQgHBpxDFf9H0XBUU';
@@ -465,6 +466,7 @@ let pendingImageFile = null, pendingVideoFile = null, pendingAudioBlob = null;
 let feedRecorder = null, feedChunks = [];
 let chatRecorder = null, chatChunks = [];
 let allDoctors = [];
+let confRequestInterval = null;
 
 const ROLE_LABELS = { admin:'System Admin', super_admin:'Super Admin', branch_admin:'Branch Admin', doctor:'Doctor', surgeon:'Surgeon', nurse:'Nurse', midwife:'Midwife', lab_tech:'Lab Technician', radiologist:'Radiologist', pharmacist:'Pharmacist', physiotherapist:'Physiotherapist', dentist:'Dentist', receptionist:'Receptionist', billing_staff:'Billing Staff', hr_manager:'HR Manager', it_support:'IT Support', patient:'Patient' };
 const BRANCH_WORKER_ROLES = ['doctor','surgeon','nurse','midwife','lab_tech','radiologist','pharmacist','physiotherapist','dentist','receptionist','billing_staff','hr_manager','it_support','patient'];
@@ -542,6 +544,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
   if (chatInterval) clearInterval(chatInterval);
+  if (confRequestInterval) clearInterval(confRequestInterval);
   await db.auth.signOut(); window.location.reload();
 });
 
@@ -574,6 +577,17 @@ async function initApp(user) {
       if (SYMPTOM_ROLES.includes(roleStr)) document.getElementById('nav-symptom').style.display = '';
       switchTab('workspace');
     }
+
+    // UPDATE CONFERENCE BUTTON TEXT
+    const btnText = document.getElementById('conf-btn-text');
+    if (roleStr === 'admin' || roleStr === 'super_admin' || roleStr === 'branch_admin') {
+      btnText.innerText = 'Start Branch Conference';
+      // Admin listens for requests
+      confRequestInterval = setInterval(checkConferenceRequests, 8000);
+    } else {
+      btnText.innerText = 'Call Admin (Conference)';
+    }
+
     try { loadDashboard(); } catch(e) { console.error(e); }
     try { loadFeed(); } catch(e) { console.error(e); }
     try { renderEducationGrid(); } catch(e) { console.error(e); }
@@ -582,7 +596,7 @@ async function initApp(user) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  CONFERENCE LOGIC (INDEPENDENT CALLS)
+//  CONFERENCE LOGIC (REQUESTS & PRIVATE CALLS)
 // ═══════════════════════════════════════════════════════════
 function startConference(customRoomId = null) {
   document.getElementById('conference-modal').classList.remove('hidden');
@@ -590,13 +604,59 @@ function startConference(customRoomId = null) {
   document.getElementById('jitsi-iframe').src = `https://meet.systemli.org/${roomId}#config.prejoinPageEnabled=false&config.startWithAudioMuted=true`;
 }
 
-function startBranchConference() {
-  if (!userProfile || !userProfile.branch_id) return showToast('You must be assigned to a branch to start a branch meeting.', 'error');
-  const roomId = `MedConnect-Branch-${userProfile.branch_id}`;
-  startConference(roomId);
-  showToast('Joining Branch Conference...', 'info');
+// Main red button handler
+async function handleConferenceBtn() {
+  const role = String(userProfile.role).toLowerCase();
+  
+  if (role === 'admin' || role === 'super_admin') {
+    // Super Admin ignores branch ID and starts Admin HQ
+    startConference('MedConnect-Admin-HQ');
+    showToast('Starting Admin HQ Meeting...', 'info');
+  } 
+  else if (role === 'branch_admin') {
+    if (!userProfile.branch_id) return showToast('Assign a branch to your account first.', 'error');
+    startConference(`MedConnect-Branch-${userProfile.branch_id}`);
+    showToast('Starting Branch Meeting...', 'info');
+  } 
+  else {
+    // Normal user requests a meeting
+    const { error } = await db.from('conference_requests').insert([{
+      requester_id: currentUser.id,
+      requester_name: userProfile.full_name,
+      branch_id: userProfile.branch_id
+    }]);
+    if (error) showToast(error.message, 'error');
+    else showToast('Request sent to Admin! Waiting for them to start...', 'success');
+  }
 }
 
+// Admin polling for requests
+async function checkConferenceRequests() {
+  if (!userProfile) return;
+  const role = String(userProfile.role).toLowerCase();
+  if (role !== 'admin' && role !== 'super_admin' && role !== 'branch_admin') return;
+
+  let query = db.from('conference_requests').select('*').eq('status', 'pending');
+  if (role === 'branch_admin') {
+    query = query.eq('branch_id', userProfile.branch_id);
+  }
+
+  const { data } = await query;
+  if (data && data.length > 0) {
+    const req = data[0];
+    const confirmStart = confirm(`🔔 CONFERENCE REQUEST\n\n${req.requester_name} is requesting a live conference.\n\nClick OK to start the meeting now.`);
+    
+    // Mark as accepted so it doesn't pop up again
+    await db.from('conference_requests').update({ status: 'accepted' }).eq('id', req.id);
+    
+    if (confirmStart) {
+      const roomId = req.branch_id ? `MedConnect-Branch-${req.branch_id}` : 'MedConnect-Admin-HQ';
+      startConference(roomId);
+    }
+  }
+}
+
+// Direct Call from Chat
 function startDirectCall() {
   if (!chatPartnerId) return showToast('Select a contact from the left first.', 'error');
   const ids = [currentUser.id, chatPartnerId].sort();
@@ -634,6 +694,7 @@ async function loadPatientVisits() {
     if (!userProfile.branch_id) throw new Error("Your account has no Branch ID. Go to Supabase -> profiles and assign a branch.");
     await loadDoctorsForAssignment();
 
+    // FIXED: Removed the failing `profiles:assigned_doctor_id(full_name)` relation.
     let { data, error } = await db.from('patient_visits').select('*').eq('branch_id', userProfile.branch_id).neq('status', 'Completed').order('created_at', { ascending: false });
     if (error) throw error;
 
