@@ -249,8 +249,7 @@ tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { 50:
   </div>
 </div>
 
-<!-- ══════════════ MAIN APP ══════════════ -->
-<!-- MOBILE TOP HEADER -->
+<!-- MOBILE TOP HEADER (Visible only on small screens) -->
 <header class="md:hidden fixed top-0 left-0 w-full h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-40 flex items-center justify-between px-4 shadow-sm">
     <h1 class="text-xl font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-2">🩺 MedConnect</h1>
     <button onclick="toggleMobileMenu()" class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300">
@@ -258,8 +257,19 @@ tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { 50:
     </button>
 </header>
 
-<!-- MOBILE MENU OVERLAY (Dark background when menu is open) -->
+<!-- DARK BACKGROUND OVERLAY (Appears when mobile menu is open) -->
 <div id="mobile-menu-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden" onclick="toggleMobileMenu()"></div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="app-screen" class="hidden flex-1 flex justify-center overflow-hidden">
+  <div class="flex w-full max-w-[1600px] h-full min-w-0">
+
+    <!-- SIDEBAR (Modified for mobile slide-in) -->
+    <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full shrink-0 shadow-sm transition-transform duration-300 transform -translate-x-full md:translate-x-0 md:static">
+      <div class="p-6 flex justify-between items-center border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-800">
+        <h1 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 flex items-center gap-2">🩺 MedConnect</h1>
+        <button onclick="toggleDarkMode()" class="p-2 bg-white dark:bg-gray-700 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition shadow"><span class="dark:hidden text-sm">🌙</span><span class="hidden dark:inline text-sm">☀️</span></button>
+      </div>
 
       <div class="flex-1 overflow-y-auto px-3 py-4 space-y-6">
         <div>
@@ -321,9 +331,8 @@ tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { 50:
       </div>
     </aside>
 
-    <!-- CENTER -->
-    <main class="flex-1 min-w-0 border-r border-gray-200 dark:border-gray-700 h-full overflow-y-auto bg-gray-50 dark:bg-gray-900 relative transition-colors p-6">
-
+    <!-- CENTER (Added pt-20 for mobile header spacing) -->
+    <main class="flex-1 min-w-0 border-r border-gray-200 dark:border-gray-700 h-full overflow-y-auto bg-gray-50 dark:bg-gray-900 relative transition-colors p-4 md:p-6 pt-20 md:pt-6">
       <!-- DASHBOARD -->
       <div id="view-dashboard" class="view-section fade-in hidden">
         <h2 class="text-2xl font-bold mb-6">Welcome back, <span id="dash-name">User</span> 👋 <span id="dash-role-badge" class="text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full ml-2 align-middle"></span></h2>
@@ -766,6 +775,18 @@ if (localStorage.getItem('theme') === 'dark') document.documentElement.classList
 function toggleDarkMode() {
   document.documentElement.classList.toggle('dark');
   localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+}
+function toggleMobileMenu() {
+    const sidebar = document.getElementById('app-sidebar');
+    const overlay = document.getElementById('mobile-menu-overlay');
+    
+    if (sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+    } else {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+    }
 }
 
 function showToast(msg, type='success') {
