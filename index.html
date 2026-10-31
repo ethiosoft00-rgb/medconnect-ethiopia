@@ -6,11 +6,10 @@
 <title>MedConnect Ethiopia</title>
 <link rel="manifest" href="/manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }
-tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a' } } } } }
-</script>
 <script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a' } } } } }
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 ::-webkit-scrollbar { width: 6px; }
@@ -1359,7 +1358,6 @@ function messageAuthor(authorId, authorName) {
 }
   window._postContentMap = {};
   posts.forEach(p => { window._postContentMap[p.id] = p.content || ''; });
-}
 
 async function translatePostText(postId) {
   const raw = window._postContentMap?.[postId] || '';
