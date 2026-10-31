@@ -615,12 +615,12 @@
       </div>
       <div id="view-education" class="view-section fade-in hidden"></div>
     </main>
-
     <aside class="w-80 hidden lg:block p-6 h-full overflow-y-auto shrink-0 bg-white dark:bg-gray-800 border-l">
       <button id="start-conf-btn" onclick="startConference()" class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-2xl shadow-lg font-bold text-lg mb-6 flex items-center justify-center gap-2 hover:from-red-600 hover:to-red-700">
         <span class="animate-pulse">🔴</span> Start Live Conference
       </button>
       <div class="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 p-5 rounded-2xl border mb-6">
+        <!-- FIXED: Image URL is now on one line -->
         <img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=400&q=80" class="rounded-xl mb-3 w-full h-32 object-cover">
         <h3 class="font-bold text-sm">"The best way to find yourself is to lose yourself in the service of others."</h3>
         <p class="text-xs text-gray-500 font-bold mt-2">- Mahatma Gandhi</p>
@@ -663,11 +663,13 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     PART 2 STARTS HERE — Reply "PART 2" to get the full
-     <script> block with all translation + upload fixes.
-     ═══════════════════════════════════════════════════════════ -->
-     <script>
+<!-- MOBILE FLOATING CONFERENCE BUTTON -->
+<button onclick="startConference()" class="lg:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-full shadow-2xl hover:from-red-600 hover:to-red-700 transition transform active:scale-95 flex items-center justify-center">
+    <span class="text-2xl animate-pulse">📹</span>
+</button>
+
+<!-- ══════════════ JAVASCRIPT STARTS HERE ══════════════ -->
+<script>
 // ═══════════════════════════════════════════════════════════
 //  CONFIG
 // ═══════════════════════════════════════════════════════════
