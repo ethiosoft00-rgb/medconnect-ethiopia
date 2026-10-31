@@ -19,7 +19,7 @@
 .mic-active { animation: pulse-red 1.2s infinite; color: #ef4444 !important; transform: scale(1.1); }
 @keyframes pulse-red { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
-/* ═══════ REAL-IMAGE LOGIN ═══════ */
+/* LOGIN STYLES */
 .login-bg { position: relative; overflow: hidden; background: #0b1220; }
 .login-slides { position: absolute; inset: 0; z-index: 0; }
 .login-slide { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transform: scale(1.06); animation: loginSlideFade 24s infinite, loginKenBurns 24s infinite; }
@@ -147,6 +147,19 @@
   </div>
 </div>
 
+<!-- INCOMING CONFERENCE REQUEST MODAL (Admin only) -->
+<div id="incoming-call-modal" class="hidden fixed inset-0 bg-black/80 z-[110] flex items-center justify-center fade-in">
+  <div class="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl w-96 border border-gray-100 dark:border-gray-700 text-center">
+    <div class="text-6xl mb-4 animate-bounce">📞</div>
+    <h2 class="text-2xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">Incoming Conference!</h2>
+    <p class="text-gray-600 dark:text-gray-400 mb-6"><span id="incoming-caller-name" class="font-bold text-blue-600">Worker</span> is requesting a live conference.</p>
+    <div class="flex gap-4">
+      <button onclick="rejectConference()" class="flex-1 bg-red-100 text-red-700 font-bold py-3 rounded-xl hover:bg-red-200 transition">Reject</button>
+      <button onclick="acceptConference()" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 shadow-md transition">Accept</button>
+    </div>
+  </div>
+</div>
+
 <!-- MOBILE HEADER -->
 <header class="md:hidden fixed top-0 left-0 w-full h-16 bg-white dark:bg-gray-800 border-b z-40 flex items-center justify-between px-4 shadow-sm">
     <h1 class="text-xl font-extrabold text-blue-600 flex items-center gap-2">🩺 MedConnect</h1>
@@ -205,8 +218,7 @@
         <button id="logout-btn" class="w-full py-2 bg-white border border-red-200 text-red-600 rounded-lg font-bold">Logout</button>
       </div>
     </aside>
-        <!-- CENTER CONTENT -->
-    <main class="flex-1 min-w-0 border-r h-full overflow-y-auto bg-gray-50 dark:bg-gray-900 relative p-4 md:p-6 pt-20 md:pt-6">
+        <main class="flex-1 min-w-0 border-r h-full overflow-y-auto bg-gray-50 dark:bg-gray-900 relative p-4 md:p-6 pt-20 md:pt-6">
       
       <!-- DASHBOARD -->
       <div id="view-dashboard" class="view-section fade-in hidden">
@@ -248,7 +260,7 @@
         </div>
       </div>
 
-      <!-- FEED (POSTING) -->
+      <!-- FEED -->
       <div id="view-feed" class="view-section fade-in hidden">
         <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border mb-6">
           <div class="flex gap-3">
@@ -412,9 +424,8 @@
       <div id="view-education" class="view-section fade-in hidden"></div>
     </main>
     
-    <!-- RIGHT SIDEBAR (BRANCH CONFERENCE) -->
+    <!-- RIGHT SIDEBAR -->
     <aside class="w-80 hidden lg:block p-6 h-full overflow-y-auto shrink-0 bg-white dark:bg-gray-800 border-l">
-      <!-- We change the text to be dynamic based on role -->
       <button id="start-conf-btn" onclick="handleConferenceBtn()" class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-2xl shadow-lg font-bold text-lg mb-6 flex items-center justify-center gap-2">
         <span class="animate-pulse">🔴</span> <span id="conf-btn-text">Start Live Conference</span>
       </button>
@@ -466,7 +477,11 @@ let pendingImageFile = null, pendingVideoFile = null, pendingAudioBlob = null;
 let feedRecorder = null, feedChunks = [];
 let chatRecorder = null, chatChunks = [];
 let allDoctors = [];
+
+// Conference Request State
 let confRequestInterval = null;
+let workerRequestInterval = null;
+let activeRequestId = null;
 
 const ROLE_LABELS = { admin:'System Admin', super_admin:'Super Admin', branch_admin:'Branch Admin', doctor:'Doctor', surgeon:'Surgeon', nurse:'Nurse', midwife:'Midwife', lab_tech:'Lab Technician', radiologist:'Radiologist', pharmacist:'Pharmacist', physiotherapist:'Physiotherapist', dentist:'Dentist', receptionist:'Receptionist', billing_staff:'Billing Staff', hr_manager:'HR Manager', it_support:'IT Support', patient:'Patient' };
 const BRANCH_WORKER_ROLES = ['doctor','surgeon','nurse','midwife','lab_tech','radiologist','pharmacist','physiotherapist','dentist','receptionist','billing_staff','hr_manager','it_support','patient'];
@@ -545,6 +560,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 document.getElementById('logout-btn').addEventListener('click', async () => {
   if (chatInterval) clearInterval(chatInterval);
   if (confRequestInterval) clearInterval(confRequestInterval);
+  if (workerRequestInterval) clearInterval(workerRequestInterval);
   await db.auth.signOut(); window.location.reload();
 });
 
@@ -578,12 +594,12 @@ async function initApp(user) {
       switchTab('workspace');
     }
 
-    // UPDATE CONFERENCE BUTTON TEXT
+    // CONFERENCE INITIALIZATION
     const btnText = document.getElementById('conf-btn-text');
     if (roleStr === 'admin' || roleStr === 'super_admin' || roleStr === 'branch_admin') {
-      btnText.innerText = 'Start Branch Conference';
-      // Admin listens for requests
-      confRequestInterval = setInterval(checkConferenceRequests, 8000);
+      btnText.innerText = 'Start Live Conference';
+      // Admin polls for incoming requests
+      confRequestInterval = setInterval(checkConferenceRequests, 4000);
     } else {
       btnText.innerText = 'Call Admin (Conference)';
     }
@@ -596,7 +612,7 @@ async function initApp(user) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  CONFERENCE LOGIC (REQUESTS & PRIVATE CALLS)
+//  CONFERENCE LOGIC (REQUESTS & ACCEPT/REJECT)
 // ═══════════════════════════════════════════════════════════
 function startConference(customRoomId = null) {
   document.getElementById('conference-modal').classList.remove('hidden');
@@ -604,12 +620,11 @@ function startConference(customRoomId = null) {
   document.getElementById('jitsi-iframe').src = `https://meet.systemli.org/${roomId}#config.prejoinPageEnabled=false&config.startWithAudioMuted=true`;
 }
 
-// Main red button handler
+// Worker clicks to request a meeting
 async function handleConferenceBtn() {
   const role = String(userProfile.role).toLowerCase();
   
   if (role === 'admin' || role === 'super_admin') {
-    // Super Admin ignores branch ID and starts Admin HQ
     startConference('MedConnect-Admin-HQ');
     showToast('Starting Admin HQ Meeting...', 'info');
   } 
@@ -619,18 +634,24 @@ async function handleConferenceBtn() {
     showToast('Starting Branch Meeting...', 'info');
   } 
   else {
-    // Normal user requests a meeting
+    // Worker requests a meeting
     const { error } = await db.from('conference_requests').insert([{
       requester_id: currentUser.id,
       requester_name: userProfile.full_name,
       branch_id: userProfile.branch_id
     }]);
-    if (error) showToast(error.message, 'error');
-    else showToast('Request sent to Admin! Waiting for them to start...', 'success');
+    
+    if (error) return showToast(error.message, 'error');
+    
+    showToast('Ringing Admin... Please wait.', 'info');
+    
+    // Worker starts polling to see if admin accepts
+    if (workerRequestInterval) clearInterval(workerRequestInterval);
+    workerRequestInterval = setInterval(checkMyRequestStatus, 3000);
   }
 }
 
-// Admin polling for requests
+// Admin polls for incoming requests
 async function checkConferenceRequests() {
   if (!userProfile) return;
   const role = String(userProfile.role).toLowerCase();
@@ -642,16 +663,68 @@ async function checkConferenceRequests() {
   }
 
   const { data } = await query;
-  if (data && data.length > 0) {
+  if (data && data.length > 0 && !activeRequestId) {
+    // Show custom modal instead of confirm()
     const req = data[0];
-    const confirmStart = confirm(`🔔 CONFERENCE REQUEST\n\n${req.requester_name} is requesting a live conference.\n\nClick OK to start the meeting now.`);
-    
-    // Mark as accepted so it doesn't pop up again
-    await db.from('conference_requests').update({ status: 'accepted' }).eq('id', req.id);
-    
-    if (confirmStart) {
-      const roomId = req.branch_id ? `MedConnect-Branch-${req.branch_id}` : 'MedConnect-Admin-HQ';
+    activeRequestId = req.id;
+    document.getElementById('incoming-caller-name').innerText = req.requester_name;
+    document.getElementById('incoming-call-modal').classList.remove('hidden');
+  }
+}
+
+// Admin clicks "Accept"
+async function acceptConference() {
+  if (!activeRequestId) return;
+  const { data: req } = await db.from('conference_requests').select('*').eq('id', activeRequestId).single();
+  
+  // Update DB
+  await db.from('conference_requests').update({ status: 'accepted' }).eq('id', activeRequestId);
+  
+  // Hide modal
+  document.getElementById('incoming-call-modal').classList.add('hidden');
+  
+  // Start meeting
+  if (req) {
+    const roomId = req.branch_id ? `MedConnect-Branch-${req.branch_id}` : 'MedConnect-Admin-HQ';
+    startConference(roomId);
+    showToast('Conference accepted. Joining...', 'success');
+  }
+  activeRequestId = null;
+}
+
+// Admin clicks "Reject"
+async function rejectConference() {
+  if (!activeRequestId) return;
+  
+  // Update DB
+  await db.from('conference_requests').update({ status: 'rejected' }).eq('id', activeRequestId);
+  
+  // Hide modal
+  document.getElementById('incoming-call-modal').classList.add('hidden');
+  showToast('Conference request rejected.', 'error');
+  activeRequestId = null;
+}
+
+// Worker polls to see if their request was accepted
+async function checkMyRequestStatus() {
+  if (!currentUser) return;
+  
+  const { data } = await db.from('conference_requests')
+    .select('*')
+    .eq('requester_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (data) {
+    if (data.status === 'accepted') {
+      clearInterval(workerRequestInterval);
+      const roomId = data.branch_id ? `MedConnect-Branch-${data.branch_id}` : 'MedConnect-Admin-HQ';
       startConference(roomId);
+      showToast('Admin accepted! Joining...', 'success');
+    } else if (data.status === 'rejected') {
+      clearInterval(workerRequestInterval);
+      showToast('Admin rejected the conference.', 'error');
     }
   }
 }
@@ -671,7 +744,7 @@ function confStopListen() { confIsListening = false; if (confRecognition) { try 
 async function confTypedToVoice() { const input = document.getElementById('conf-typed'); const lang = document.getElementById('conf-target-lang').value; if (!input.value) return; const original = input.value; const translated = await translateText(original, lang); speakText(translated, lang); const box = document.getElementById('conf-transcript'); box.insertAdjacentHTML('beforeend', `<div class="conf-transcript-line" onclick="speakText(this.querySelector('.conf-tr').innerText, document.getElementById('conf-target-lang').value)"><div class="text-xs text-gray-300">${original}</div><div class="mt-1"><span class="conf-lang-pill">${lang}</span> <span class="text-white text-sm conf-tr">${translated}</span></div></div>`); box.scrollTop = box.scrollHeight; input.value = ''; }
 
 // ═══════════════════════════════════════════════════════════
-//  PATIENT WORKFLOW (FIXED DB ERROR)
+//  PATIENT WORKFLOW (FIXED)
 // ═══════════════════════════════════════════════════════════
 async function loadDoctorsForAssignment() {
   if (!userProfile.branch_id) return;
@@ -694,7 +767,6 @@ async function loadPatientVisits() {
     if (!userProfile.branch_id) throw new Error("Your account has no Branch ID. Go to Supabase -> profiles and assign a branch.");
     await loadDoctorsForAssignment();
 
-    // FIXED: Removed the failing `profiles:assigned_doctor_id(full_name)` relation.
     let { data, error } = await db.from('patient_visits').select('*').eq('branch_id', userProfile.branch_id).neq('status', 'Completed').order('created_at', { ascending: false });
     if (error) throw error;
 
