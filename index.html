@@ -1136,6 +1136,9 @@ function makeRecognizer({lang='en-US', onFinal, onEnd, onStart}) {
 // ═══════════════════════════════════════════════════════════
 //  FEED
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  FEED
+// ═══════════════════════════════════════════════════════════
 document.getElementById('file-image').addEventListener('change', (e) => {
   const f = e.target.files[0]; if (!f) return;
   pendingImageFile = f; pendingVideoFile = null; pendingAudioBlob = null;
@@ -1287,6 +1290,59 @@ function renderPostMedia(p) {
   return `<a href="${url}" target="_blank" class="block mt-3 text-blue-500 underline">📎 View attachment</a>`;
 }
 
+async function loadFeed() {
+  const { data: posts, error } = await db.from('posts').select(`*, profiles (full_name, role)`).order('created_at',{ascending:false}).limit(50);
+  const container = document.getElementById('feed-container');
+  if (error) { container.innerHTML = `<p class="text-center text-red-500 py-4">${error.message}</p>`; return; }
+  if (!posts || !posts.length) { container.innerHTML = `<p class="text-center text-gray-500 py-4">No posts yet. Be the first to share!</p>`; return; }
+
+  container.innerHTML = posts.map(p => {
+    const safe = (p.content || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border" id="post-${p.id}">
+        <div class="flex gap-3 mb-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full flex items-center justify-center font-bold shrink-0">${p.profiles?.full_name?.charAt(0) || 'U'}</div>
+          <div class="min-w-0 flex-1">
+            <p class="font-bold truncate">${p.profiles?.full_name || 'Unknown'}</p>
+            <p class="text-xs text-gray-500">${(ROLE_LABELS[p.profiles?.role]||p.profiles?.role||'USER').toUpperCase()} • ${new Date(p.created_at).toLocaleString()}</p>
+          </div>
+        </div>
+        ${safe ? `<p class="text-lg whitespace-pre-wrap break-words mb-2" id="post-text-${p.id}">${safe}</p>` : ''}
+        ${renderPostMedia(p)}
+        
+        <div class="trans-bar mt-3">
+          <button type="button" class="trans-btn tt" onclick="translatePostText('${p.id}')">🌐 Text→Text</button>
+          <button type="button" class="trans-btn tv" onclick="speakText(document.getElementById('post-text-${p.id}').innerText,'English')">🔊 Text→Voice</button>
+          <button type="button" class="trans-btn vt" onclick="listenPostVoice('${p.id}')">🎤 Voice→Text</button>
+          <button type="button" class="trans-btn vv" onclick="voiceToVoicePostReply('${p.id}')">🔁 Voice→Voice</button>
+          <select id="post-lang-${p.id}" class="text-xs border rounded-lg p-1.5 bg-white dark:bg-gray-700 font-bold">
+            <option>English</option><option>Amharic</option><option>Afaan Oromoo</option><option>Tigrinya</option>
+          </select>
+          <input type="text" id="post-reply-${p.id}" placeholder="Type reply / translation…" class="flex-1 min-w-[140px] text-xs border rounded-lg p-1.5 bg-white dark:bg-gray-700">
+        </div>
+
+        <div class="flex flex-wrap gap-4 text-gray-500 font-bold text-sm mt-3 border-t pt-3">
+          <button onclick="toggleLike('${p.id}')" class="hover:text-red-500 flex items-center gap-1 transition" id="like-btn-${p.id}">❤️ <span id="like-count-${p.id}">0</span></button>
+          <button onclick="toggleDislike('${p.id}')" class="hover:text-orange-500 flex items-center gap-1 transition" id="dislike-btn-${p.id}">👎 <span id="dislike-count-${p.id}">0</span></button>
+          <button onclick="toggleComments('${p.id}')" class="hover:text-blue-500 flex items-center gap-1 transition">💬 Comment</button>
+          <button onclick="sharePost('${p.id}')" class="hover:text-green-500 flex items-center gap-1 transition">🔗 Share</button>
+          <button onclick="messageAuthor('${p.author_id}', '${p.profiles?.full_name}')" class="hover:text-purple-500 flex items-center gap-1 transition">✉️ Message</button>
+        </div>
+
+        <div id="comments-section-${p.id}" class="hidden mt-3 bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+            <div id="comments-list-${p.id}" class="space-y-2 mb-3 text-sm"></div>
+            <div class="flex gap-2">
+                <input type="text" id="comment-input-${p.id}" placeholder="Write a reply..." class="flex-1 p-2 border rounded-lg bg-white dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="submitComment('${p.id}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition">Reply</button>
+            </div>
+        </div>
+      </div>`;
+  }).join('');
+  
+  window._postContentMap = {};
+  posts.forEach(p => { window._postContentMap[p.id] = p.content || ''; });
+}
+
 function toggleLike(postId) {
     const btn = document.getElementById(`like-btn-${postId}`);
     const count = document.getElementById(`like-count-${postId}`);
@@ -1358,8 +1414,6 @@ function messageAuthor(authorId, authorName) {
     switchTab('messages');
     setTimeout(() => { selectChatPartner(authorId, authorName, 'Staff'); }, 300);
 }
-  window._postContentMap = {};
-  posts.forEach(p => { window._postContentMap[p.id] = p.content || ''; });
 
 async function translatePostText(postId) {
   const raw = window._postContentMap?.[postId] || '';
@@ -2042,95 +2096,6 @@ function renderEducationGrid() {
       <img src="${e.img}" class="w-full h-32 object-cover">
       <div class="p-3"><h3 class="font-bold text-sm">${e.title}</h3><p class="text-xs text-gray-500">${e.desc}</p></div>
     </div>`).join('');
-}
-    <!-- MOBILE FLOATING CONFERENCE BUTTON -->
-<button onclick="startConference()" class="lg:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-full shadow-2xl hover:from-red-600 hover:to-red-700 transition transform active:scale-95 flex items-center justify-center">
-    <span class="text-2xl animate-pulse">📹</span>
-</button>
-
-function toggleLike(postId) {
-    const btn = document.getElementById(`like-btn-${postId}`);
-    const count = document.getElementById(`like-count-${postId}`);
-    const isLiked = btn.classList.contains('text-red-500');
-    
-    if (isLiked) {
-        btn.classList.remove('text-red-500');
-        count.innerText = parseInt(count.innerText) - 1;
-    } else {
-        btn.classList.add('text-red-500');
-        count.innerText = parseInt(count.innerText) + 1;
-        // Remove dislike if active
-        const disBtn = document.getElementById(`dislike-btn-${postId}`);
-        if(disBtn.classList.contains('text-orange-500')){
-            disBtn.classList.remove('text-orange-500');
-            document.getElementById(`dislike-count-${postId}`).innerText = parseInt(document.getElementById(`dislike-count-${postId}`).innerText) - 1;
-        }
-    }
-}
-
-function toggleDislike(postId) {
-    const btn = document.getElementById(`dislike-btn-${postId}`);
-    const count = document.getElementById(`dislike-count-${postId}`);
-    const isDisliked = btn.classList.contains('text-orange-500');
-    
-    if (isDisliked) {
-        btn.classList.remove('text-orange-500');
-        count.innerText = parseInt(count.innerText) - 1;
-    } else {
-        btn.classList.add('text-orange-500');
-        count.innerText = parseInt(count.innerText) + 1;
-        // Remove like if active
-        const likeBtn = document.getElementById(`like-btn-${postId}`);
-        if(likeBtn.classList.contains('text-red-500')){
-            likeBtn.classList.remove('text-red-500');
-            document.getElementById(`like-count-${postId}`).innerText = parseInt(document.getElementById(`like-count-${postId}`).innerText) - 1;
-        }
-    }
-}
-
-function toggleComments(postId) {
-    const sec = document.getElementById(`comments-section-${postId}`);
-    sec.classList.toggle('hidden');
-}
-
-function submitComment(postId) {
-    const input = document.getElementById(`comment-input-${postId}`);
-    const list = document.getElementById(`comments-list-${postId}`);
-    if(!input.value.trim()) return;
-    
-    const div = document.createElement('div');
-    div.className = "bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700";
-    div.innerHTML = `<span class="font-bold text-blue-600 dark:text-blue-400">${userProfile?.full_name || 'You'}:</span> ${input.value}`;
-    
-    list.appendChild(div);
-    input.value = '';
-    showToast('Comment added successfully!');
-}
-
-function sharePost(postId) {
-    const url = window.location.origin + window.location.pathname + '#' + postId;
-    if (navigator.share) {
-        navigator.share({
-            title: 'MedConnect Post',
-            text: 'Check out this medical case on MedConnect Ethiopia',
-            url: url
-        }).catch(console.error);
-    } else {
-        navigator.clipboard.writeText(url);
-        showToast('Link copied to clipboard!');
-    }
-}
-
-function messageAuthor(authorId, authorName) {
-    if(authorId === currentUser.id) return showToast('You cannot message yourself', 'error');
-    
-    // Switch to messages tab and open chat with this author
-    switchTab('messages');
-    
-    // Find the staff in the list and select them
-    setTimeout(() => {
-        selectChatPartner(authorId, authorName, 'Staff');
-    }, 300);
 }
 
 // ⬇️ THIS IS THE END OF YOUR JAVASCRIPT ⬇️
