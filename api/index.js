@@ -4,23 +4,20 @@ const path = require('path');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 
-// Load environment variables
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-
+app.use(express.static(__dirname));
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Changed from process.exit(1) to a warning so Vercel doesn't instantly crash
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('⚠️ WARNING: Missing environment variables. Check Vercel settings.');
+  console.error('⚠️ WARNING: Missing environment variables. Check your .env file locally or Vercel settings.');
 }
 
-// Initialize Supabase Admin Client (bypasses RLS and email confirmation)
 const adminClient = createClient(
   SUPABASE_URL || 'https://placeholder.supabase.co', 
   SUPABASE_SERVICE_ROLE_KEY || 'placeholder', 
@@ -30,7 +27,6 @@ const adminClient = createClient(
 /* ---------------- HTML Renderer ---------------- */
 function renderApp(res, branchSlug = '') {
   try {
-    // FIXED: Removed '..' so it looks in the same folder as server.js (Vercel compatible)
     let html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
     html = html.replace(/__SUPABASE_URL__/g, SUPABASE_URL || '');
     html = html.replace(/__SUPABASE_ANON_KEY__/g, SUPABASE_ANON_KEY || '');
@@ -38,16 +34,13 @@ function renderApp(res, branchSlug = '') {
     res.send(html);
   } catch (err) {
     console.error("File Read Error:", err);
-    res.status(500).send("Error: Could not load index.html. Make sure it is in the root folder.");
+    res.status(500).send("Error: Could not load index.html.");
   }
 }
 
 /* ---------------- Public Routes ---------------- */
 app.get('/', (req, res) => renderApp(res, ''));
-
-app.get('/b/:slug', async (req, res) => {
-  renderApp(res, req.params.slug);
-});
+app.get('/b/:slug', (req, res) => renderApp(res, req.params.slug));
 
 app.get('/api/branch/:slug', async (req, res) => {
   const { slug } = req.params;
@@ -77,7 +70,7 @@ async function requireUser(req, res, next) {
   next();
 }
 
-/* ---------------- CREATE BRANCH & ADMIN ---------------- */
+/* ---------------- Create Branch & Admin ---------------- */
 app.post('/api/admin/create-branch-with-admin', requireUser, async (req, res) => {
   try {
     if (!['admin', 'super_admin'].includes(req.profile.role)) {
@@ -103,7 +96,7 @@ app.post('/api/admin/create-branch-with-admin', requireUser, async (req, res) =>
     });
 
     if (adminError) {
-      await adminClient.from('branches').delete().eq('id', branch.id); // Rollback
+      await adminClient.from('branches').delete().eq('id', branch.id);
       return res.status(400).json({ error: 'Admin creation failed: ' + adminError.message });
     }
 
@@ -240,9 +233,13 @@ app.post('/api/translate', async (req, res) => {
 /* ---------------- Catch-all & Server Start ---------------- */
 app.get('*', (req, res) => res.redirect('/'));
 
-const PORT = process.env.PORT || 5050;
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+if (require.main === module) {
+  const PORT = process.env.PORT || 5050;
+  app.listen(PORT, () => {
+    console.log(`\n=========================================`);
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`=========================================\n`);
+  });
 }
 
 module.exports = app;
