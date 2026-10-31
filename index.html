@@ -674,7 +674,7 @@
 //  CONFIG
 // ═══════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://fbctinyljiclbulghcrp.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_4q0cMvzlAG76NRxDRA2N4Q_LxR-p5lM';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiY3RpbnlsamljbGJ1bGdoY3JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTIyNTcsImV4cCI6MjEwODkyODI1N30.Rw98xrSETXMCtZtr_Mmq6ITJoLaQgHBpxDFf9H0XBUU';
 const BRANCH_SLUG = '__BRANCH_SLUG__';
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -2033,11 +2033,24 @@ document.getElementById('patient-register-form').addEventListener('submit', asyn
       phone: document.getElementById('reg-phone').value.trim(),
       password: document.getElementById('reg-pass').value
     })});
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    
+    // --- NEW FIX: Read as text first, then try to parse JSON ---
+    const text = await res.text();
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (err) {
+        throw new Error("Server error. Please check Vercel logs.");
+    }
+
+    if (!res.ok) throw new Error(data.error || 'Registration failed');
+    
     showToast(data.message || 'Account created!');
     closePatientRegister(); e.target.reset();
-  } catch(err) { errEl.innerText = err.message; errEl.classList.remove('hidden'); }
+  } catch(err) { 
+    errEl.innerText = err.message; 
+    errEl.classList.remove('hidden'); 
+  }
   finally { btn.innerText = 'Create Account'; btn.disabled = false; }
 });
 
