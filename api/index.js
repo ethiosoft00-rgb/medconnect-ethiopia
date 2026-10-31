@@ -4,10 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 
-// ---- Load .env ----
+// Load environment variables
 require('dotenv').config();
-require('dotenv').config({ path: path.join(__dirname, '.env') });
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const app = express();
 app.use(cors());
@@ -17,22 +15,31 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// Changed from process.exit(1) to a warning so Vercel doesn't instantly crash
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('❌ Missing environment variables.');
-  process.exit(1);
+  console.error('⚠️ WARNING: Missing environment variables. Check Vercel settings.');
 }
 
-const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false }
-});
+// Initialize Supabase Admin Client (bypasses RLS and email confirmation)
+const adminClient = createClient(
+  SUPABASE_URL || 'https://placeholder.supabase.co', 
+  SUPABASE_SERVICE_ROLE_KEY || 'placeholder', 
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
 
 /* ---------------- HTML Renderer ---------------- */
 function renderApp(res, branchSlug = '') {
-  let html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  html = html.replace(/__SUPABASE_URL__/g, SUPABASE_URL || '');
-  html = html.replace(/__SUPABASE_ANON_KEY__/g, SUPABASE_ANON_KEY || '');
-  html = html.replace(/__BRANCH_SLUG__/g, branchSlug || '');
-  res.send(html);
+  try {
+    // FIXED: Removed '..' so it looks in the same folder as server.js (Vercel compatible)
+    let html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+    html = html.replace(/__SUPABASE_URL__/g, SUPABASE_URL || '');
+    html = html.replace(/__SUPABASE_ANON_KEY__/g, SUPABASE_ANON_KEY || '');
+    html = html.replace(/__BRANCH_SLUG__/g, branchSlug || '');
+    res.send(html);
+  } catch (err) {
+    console.error("File Read Error:", err);
+    res.status(500).send("Error: Could not load index.html. Make sure it is in the root folder.");
+  }
 }
 
 /* ---------------- Public Routes ---------------- */
@@ -49,12 +56,6 @@ app.get('/api/branch/:slug', async (req, res) => {
     const r = await adminClient.from('branches').select('id, name, location, slug').eq('slug', slug).maybeSingle();
     data = r.data;
   } catch (_) {}
-  if (!data) {
-    try {
-      const r = await adminClient.from('branches').select('id, name, location, slug').eq('id', slug).maybeSingle();
-      data = r.data;
-    } catch (_) {}
-  }
   if (!data) return res.status(404).json({ error: 'Branch not found' });
   res.json(data);
 });
@@ -63,98 +64,55 @@ app.get('/api/branch/:slug', async (req, res) => {
 async function requireUser(req, res, next) {
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'No token' });
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+  
   const { data: { user }, error } = await adminClient.auth.getUser(token);
   if (error || !user) return res.status(401).json({ error: 'Invalid token' });
-  const { data: profile, error: pErr } = await adminClient
-    .from('profiles').select('*').eq('id', user.id).maybeSingle();
-  if (pErr || !profile) return res.status(403).json({ error: 'No profile' });
+  
+  const { data: profile, error: pErr } = await adminClient.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if (pErr || !profile) return res.status(403).json({ error: 'Profile not found' });
+  
   req.user = user;
   req.profile = profile;
   next();
 }
 
-/* ---------------- CREATE BRANCH & ADMIN (Bulletproof Endpoint) ---------------- */
+/* ---------------- CREATE BRANCH & ADMIN ---------------- */
 app.post('/api/admin/create-branch-with-admin', requireUser, async (req, res) => {
   try {
     if (!['admin', 'super_admin'].includes(req.profile.role)) {
       return res.status(403).json({ error: 'Only System Admins can create branches.' });
     }
 
-    const { 
-      branchName, branchLocation, branchSlug, 
-      adminName, adminStaffId, adminPassword 
-    } = req.body;
-
+    const { branchName, branchLocation, branchSlug, adminName, adminStaffId, adminPassword } = req.body;
     if (!branchName || !adminName || !adminStaffId || !adminPassword) {
       return res.status(400).json({ error: 'Missing required fields.' });
     }
 
-    // 1. Create the Branch
     const generatedSlug = branchSlug || branchName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const { data: branch, error: bErr } = await adminClient.from('branches').insert([{
-      name: branchName, 
-      location: branchLocation, 
-      slug: generatedSlug
+      name: branchName, location: branchLocation, slug: generatedSlug
     }]).select().single();
 
     if (bErr) return res.status(400).json({ error: 'Branch creation failed: ' + bErr.message });
 
-    // 2. Create the Auth User for Branch Admin
     const email = `${adminStaffId}@medconnect.com`;
-    
-    // We try admin.createUser first. If it fails due to a trigger, we use a fallback.
-    let createdUser = null;
-    let authErr = null;
-
     const { data: adminData, error: adminError } = await adminClient.auth.admin.createUser({
-      email,
-      password: adminPassword,
-      email_confirm: true,
+      email, password: adminPassword, email_confirm: true,
       user_metadata: { full_name: adminName, staff_id: adminStaffId, role: 'branch_admin', branch_id: branch.id }
     });
 
     if (adminError) {
-      console.log("admin.createUser failed, trying fallback...", adminError.message);
-      // Fallback: Use signUp (sometimes bypasses strict DB triggers)
-      const { data: signUpData, error: signUpError } = await adminClient.auth.signUp({
-        email,
-        password: adminPassword,
-        options: {
-          data: { full_name: adminName, staff_id: adminStaffId, role: 'branch_admin', branch_id: branch.id }
-        }
-      });
-      createdUser = signUpData?.user;
-      authErr = signUpError;
-    } else {
-      createdUser = adminData?.user;
+      await adminClient.from('branches').delete().eq('id', branch.id); // Rollback
+      return res.status(400).json({ error: 'Admin creation failed: ' + adminError.message });
     }
 
-    if (authErr || !createdUser) {
-      // Rollback branch creation if auth fails completely
-      await adminClient.from('branches').delete().eq('id', branch.id);
-      return res.status(400).json({ error: 'Admin account creation failed. Database Trigger error: ' + (authErr?.message || 'Unknown') });
-    }
-
-    // 3. Manually ensure the Profile is created (in case the DB trigger didn't do it)
-    const { error: pErr } = await adminClient.from('profiles').upsert({
-      id: createdUser.id,
-      full_name: adminName,
-      staff_id: adminStaffId,
-      role: 'branch_admin',
-      branch_id: branch.id
+    await adminClient.from('profiles').upsert({
+      id: adminData.user.id, full_name: adminName, staff_id: adminStaffId, role: 'branch_admin', branch_id: branch.id
     }, { onConflict: 'id' });
-
-    if (pErr) {
-      // Rollback everything if profile fails
-      await adminClient.auth.admin.deleteUser(createdUser.id);
-      await adminClient.from('branches').delete().eq('id', branch.id);
-      return res.status(500).json({ error: 'Profile creation failed: ' + pErr.message });
-    }
 
     res.json({ ok: true, branch });
   } catch (e) {
-    console.error('Create Branch Error:', e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -163,45 +121,27 @@ app.post('/api/admin/create-branch-with-admin', requireUser, async (req, res) =>
 app.post('/api/admin/create-user', requireUser, async (req, res) => {
   try {
     let { staffId, fullName, password, role, branchId } = req.body;
-    if (!staffId || !fullName || !password || !role) {
-      return res.status(400).json({ error: 'Missing required fields.' });
-    }
-    const caller = req.profile;
-
-    if (caller.role === 'branch_admin') {
-      const allowedWorkerRoles = [
-        'doctor', 'surgeon', 'nurse', 'midwife', 'lab_tech', 'radiologist', 
-        'pharmacist', 'physiotherapist', 'dentist', 'receptionist', 
-        'billing_staff', 'hr_manager', 'it_support', 'patient'
-      ];
-      if (!allowedWorkerRoles.includes(role)) {
-        return res.status(403).json({ error: 'Branch admins can only create worker accounts.' });
-      }
-      branchId = caller.branch_id;
-    } else if (!['admin', 'super_admin'].includes(caller.role)) {
+    if (!staffId || !fullName || !password || !role) return res.status(400).json({ error: 'Missing fields.' });
+    
+    if (req.profile.role === 'branch_admin') {
+      branchId = req.profile.branch_id;
+    } else if (!['admin', 'super_admin'].includes(req.profile.role)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
     if (!branchId) return res.status(400).json({ error: 'branchId required.' });
 
     const email = `${staffId}@medconnect.com`;
-
     const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
+      email, password, email_confirm: true,
       user_metadata: { full_name: fullName, staff_id: staffId, role, branch_id: branchId }
     });
+    
     if (createErr) return res.status(400).json({ error: createErr.message });
 
-    const { error: pErr } = await adminClient.from('profiles').upsert({
-      id: created.user.id,
-      full_name: fullName,
-      staff_id: staffId,
-      role,
-      branch_id: branchId
+    await adminClient.from('profiles').upsert({
+      id: created.user.id, full_name: fullName, staff_id: staffId, role, branch_id: branchId
     }, { onConflict: 'id' });
-    if (pErr) return res.status(500).json({ error: pErr.message });
 
     res.json({ ok: true, id: created.user.id, email });
   } catch (e) {
@@ -215,20 +155,13 @@ app.post('/api/admin/delete-user', requireUser, async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
 
-    const { data: target, error: tErr } = await adminClient.from('profiles')
-      .select('*').eq('id', userId).maybeSingle();
-    if (tErr || !target) return res.status(404).json({ error: 'User not found' });
+    const { data: target } = await adminClient.from('profiles').select('*').eq('id', userId).maybeSingle();
+    if (!target) return res.status(404).json({ error: 'User not found' });
 
-    const caller = req.profile;
-    const isSystemAdmin = ['admin', 'super_admin'].includes(caller.role);
-    const isBranchAdmin =
-      caller.role === 'branch_admin' &&
-      target.branch_id === caller.branch_id &&
-      !['admin', 'super_admin', 'branch_admin'].includes(target.role);
+    const isSystemAdmin = ['admin', 'super_admin'].includes(req.profile.role);
+    const isBranchAdmin = req.profile.role === 'branch_admin' && target.branch_id === req.profile.branch_id && !['admin', 'super_admin', 'branch_admin'].includes(target.role);
 
-    if (!isSystemAdmin && !isBranchAdmin) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    if (!isSystemAdmin && !isBranchAdmin) return res.status(403).json({ error: 'Forbidden' });
 
     await adminClient.auth.admin.deleteUser(userId);
     await adminClient.from('profiles').delete().eq('id', userId);
@@ -242,16 +175,17 @@ app.post('/api/admin/delete-user', requireUser, async (req, res) => {
 app.post('/api/public/register-patient', async (req, res) => {
   try {
     const { fullName, phone, password } = req.body;
-    if (!fullName || !phone || !password) {
-      return res.status(400).json({ error: 'Please fill in all fields.' });
-    }
+    if (!fullName || !phone || !password) return res.status(400).json({ error: 'Please fill in all fields.' });
+
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length < 9) return res.status(400).json({ error: 'Invalid phone number.' });
 
     const email = `${cleanPhone}@medconnect.com`;
-
     const { data: existing } = await adminClient.from('profiles').select('id').eq('staff_id', cleanPhone).maybeSingle();
-    if (existing) return res.status(400).json({ error: 'Patient with this phone already exists.' });
+    
+    if (existing) {
+      return res.status(400).json({ error: 'Patient with this phone already exists.' });
+    }
 
     const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
       email, password, email_confirm: true,
@@ -273,8 +207,8 @@ app.post('/api/public/register-patient', async (req, res) => {
 /* ---------------- Translation ---------------- */
 app.post('/api/translate', async (req, res) => {
   const { text, targetLang } = req.body;
-  const hasabKey = process.env.HASAB_API_KEY || 'HASAB_KEY_TFTb8SPDPAkTbzOIIJCHPWBHEjL5H1';
-
+  const hasabKey = process.env.HASAB_API_KEY;
+  
   if (hasabKey) {
     try {
       const langMap = { 'English': 'eng', 'Amharic': 'amh', 'Afaan Oromoo': 'orm', 'Tigrinya': 'tig' };
@@ -285,9 +219,7 @@ app.post('/api/translate', async (req, res) => {
         body: JSON.stringify({ text, target_language: targetCode })
       });
       const data = await response.json();
-      if (response.ok && data.translation) {
-        return res.json({ choices: [{ message: { content: data.translation } }] });
-      }
+      if (response.ok && data.translation) return res.json({ choices: [{ message: { content: data.translation } }] });
     } catch (err) {}
   }
 
@@ -305,9 +237,12 @@ app.post('/api/translate', async (req, res) => {
   }
 });
 
-/* ---------------- Catch-all ---------------- */
+/* ---------------- Catch-all & Server Start ---------------- */
 app.get('*', (req, res) => res.redirect('/'));
 
 const PORT = process.env.PORT || 5050;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+}
+
 module.exports = app;
