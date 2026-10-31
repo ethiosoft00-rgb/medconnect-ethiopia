@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedConnect Ethiopia</title>
+<link rel="manifest" href="/manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }
+tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a' } } } } }
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; }
+.mic-active { animation: pulse-red 1.2s infinite; color: #ef4444 !important; transform: scale(1.1); }
+@keyframes pulse-red { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+/* ═══════ REAL-IMAGE LOGIN ═══════ */
+.login-bg {
+  position: relative; overflow: hidden;
+  background: #0b1220;
+}
+
+/* Real medical photo slideshow (CSS-only, crossfading) */
+.login-slides { position: absolute; inset: 0; z-index: 0; }
+.login-slide {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  opacity: 0;
+  transform: scale(1.06);
+  animation: loginSlideFade 24s infinite, loginKenBurns 24s infinite;
+}
+.login-slide:nth-child(1) { animation-delay: 0s;  background-image: url('https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&w=1920&q=80'); }
+.login-slide:nth-child(2) { animation-delay: 6s;  background-image: url('https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1920&q=80'); }
+.login-slide:nth-child(3) { animation-delay: 12s; background-image: url('https://images.unsplash.com/photo-1584982751601-97dcc096659c?auto=format&fit=crop&w=1920&q=80'); }
+.login-slide:nth-child(4) { animation-delay: 18s; background-image: url('https://images.unsplash.com/photo-1631815589968-fdb09a223b1e?auto=format&fit=crop&w=1920&q=80'); }
+
+@keyframes loginSlideFade {
+  0%      { opacity: 0; }
+  4.17%   { opacity: 1; }
+  20.83%  { opacity: 1; }
+  25%     { opacity: 0; }
+  100%    { opacity: 0; }
+}
+@keyframes loginKenBurns {
+  0%   { transform: scale(1.02); }
+  100% { transform: scale(1.12); }
+}
+
+/* Animated medical gradient overlay on top of photos */
+.login-overlay {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(-45deg,
+     rgba(30,64,175,.86), rgba(88,28,135,.82),
+     rgba(190,24,93,.72), rgba(14,116,144,.82));
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+  mix-blend-mode: multiply;
+}
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Glassmorphism card */
+.login-card {
+  background: rgba(255,255,255,0.14);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.32);
+  box-shadow: 0 25px 55px rgba(0,0,0,0.35),
+              inset 0 1px 0 rgba(255,255,255,0.4);
+  animation: cardFloat 6s ease-in-out infinite;
+}
+@keyframes cardFloat {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-10px); }
+}
+
+.login-logo { animation: logoPulse 2s ease-in-out infinite; filter: drop-shadow(0 0 24px rgba(255,255,255,0.7)); }
+@keyframes logoPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+
+/* Floating medical icons above the photos */
+.floating-icon {
+  position: absolute; font-size: 2rem; opacity: .55;
+  animation: floatUp 20s linear infinite;
+  pointer-events: none; z-index: 2;
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.6));
+}
+@keyframes floatUp {
+  0%   { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+  10%  { opacity: .7; }
+  90%  { opacity: .7; }
+  100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+}
+
+.login-input { background: rgba(255,255,255,0.94); transition: all .3s; }
+.login-input:focus { background: #fff; box-shadow: 0 0 0 4px rgba(255,255,255,0.55); transform: translateY(-2px); }
+
+.login-btn {
+  background: linear-gradient(135deg,#3b82f6,#8b5cf6,#ec4899);
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+  transition: all .3s;
+  box-shadow: 0 10px 30px rgba(59,130,246,0.45);
+}
+.login-btn:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(139,92,246,0.65); }
+
+.quote-rotate { animation: quoteFade 12s infinite; }
+@keyframes quoteFade { 0%,25% { opacity: 1; } 30%,95% { opacity: 0; } 100% { opacity: 1; } }
+
+/* ═══════ WORKER HERO ═══════ */
+.workspace-hero { height:180px; background-size:cover; background-position:center; border-radius:1rem; position:relative; overflow:hidden; margin-bottom:1.5rem; }
+.workspace-hero::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(59,130,246,.85),rgba(139,92,246,.75)); }
+.workspace-hero-content { position:relative; z-index:10; height:100%; display:flex; align-items:center; padding:2rem; color:#fff; }
+
+/* ═══════ NAV ═══════ */
+.nav-btn { transition: all .2s; }
+.nav-btn:hover { transform: translateX(4px); background-color: rgba(59,130,246,0.10); }
+.nav-active { background: linear-gradient(90deg,#2563eb 0%,#3b82f6 60%,#8b5cf6 100%); color:#fff !important; box-shadow:0 4px 14px rgba(37,99,235,.35); }
+.nav-active:hover { transform:none; }
+.edu-card:hover { transform: translateY(-5px); box-shadow:0 10px 22px rgba(0,0,0,.1); }
+.fade-in { animation: fadeIn .3s ease-in-out; }
+@keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+
+.media-preview { border:2px dashed #cbd5e1; padding:8px; border-radius:12px; margin-top:8px; position:relative; }
+
+/* ═══════ TRANSLATION TOOLBAR ═══════ */
+.trans-bar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; background:linear-gradient(90deg,#eff6ff,#f5f3ff,#fdf2f8); border:1px solid #e0e7ff; border-radius:14px; padding:6px 8px; }
+.dark .trans-bar { background:linear-gradient(90deg,#1e293b,#312e81,#4c1d95); border-color:#334155; }
+.trans-btn { display:inline-flex; align-items:center; gap:4px; padding:6px 10px; border-radius:10px; font-weight:700; font-size:12px; transition:all .2s; border:1px solid transparent; }
+.trans-btn:hover { transform: translateY(-1px); }
+.trans-btn.tt { background:#dbeafe; color:#1d4ed8; }
+.trans-btn.tt:hover { background:#bfdbfe; }
+.trans-btn.vt { background:#fee2e2; color:#b91c1c; }
+.trans-btn.vt:hover { background:#fecaca; }
+.trans-btn.tv { background:#dcfce7; color:#15803d; }
+.trans-btn.tv:hover { background:#bbf7d0; }
+.trans-btn.vv { background:#f3e8ff; color:#7e22ce; }
+.trans-btn.vv:hover { background:#e9d5ff; }
+.dark .trans-btn.tt { background:#1e3a8a; color:#bfdbfe; }
+.dark .trans-btn.vt { background:#7f1d1d; color:#fecaca; }
+.dark .trans-btn.tv { background:#14532d; color:#bbf7d0; }
+.dark .trans-btn.vv { background:#4c1d95; color:#e9d5ff; }
+.trans-btn.mic-active { animation: pulse-red 1.2s infinite; }
+
+/* ═══════ CHAT BUBBLES ═══════ */
+.bubble-me { background: linear-gradient(135deg,#3b82f6,#6366f1); color:#fff; }
+.bubble-them { background:#fff; border:1px solid #e5e7eb; color:#1f2937; }
+.dark .bubble-them { background:#374151; border-color:#4b5563; color:#f3f4f6; }
+
+/* ═══════ INSTRUMENT CARDS ═══════ */
+.instr-card { transition: all .25s; border-radius:16px; overflow:hidden; border-width:1px; }
+.instr-card:hover { transform: translateY(-4px); box-shadow:0 12px 24px rgba(0,0,0,.12); }
+.instr-card .instr-icon { font-size:32px; filter: drop-shadow(0 4px 8px rgba(0,0,0,.2)); }
+.instr-detail { display:none; animation: fadeIn .2s; }
+.instr-card.open .instr-detail { display:block; }
+
+/* ═══════ NUTRITION CHAT ═══════ */
+.nutri-msg-user { background: linear-gradient(135deg,#10b981,#059669); color:#fff; border-radius:14px 14px 4px 14px; }
+.nutri-msg-ai { background:#f0fdf4; color:#064e3b; border:1px solid #bbf7d0; border-radius:14px 14px 14px 4px; }
+.dark .nutri-msg-ai { background:#064e3b; color:#d1fae5; border-color:#065f46; }
+.nutri-pill { display:inline-block; background:#dcfce7; color:#166534; border-radius:8px; padding:2px 8px; font-size:11px; font-weight:700; margin:2px; cursor:pointer; }
+.dark .nutri-pill { background:#14532d; color:#bbf7d0; }
+
+/* ═══════ CONFERENCE TRANSLATOR ═══════ */
+.conf-transcript-line { background:rgba(255,255,255,.08); border-left:3px solid #8b5cf6; padding:8px 10px; border-radius:8px; margin-bottom:6px; cursor:pointer; }
+.conf-transcript-line:hover { background:rgba(255,255,255,.14); }
+.conf-lang-pill { background:#8b5cf6; color:#fff; border-radius:6px; padding:1px 6px; font-size:10px; font-weight:700; }
+</style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 h-screen overflow-hidden flex flex-col transition-colors duration-300">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-2"></div>
+
+<!-- ══════════════ LOGIN SCREEN ══════════════ -->
+<div id="login-screen" class="flex items-center justify-center flex-1 login-bg relative p-4">
+
+  <!-- Real photo slideshow -->
+  <div class="login-slides">
+    <div class="login-slide"></div>
+    <div class="login-slide"></div>
+    <div class="login-slide"></div>
+    <div class="login-slide"></div>
+  </div>
+  <div class="login-overlay"></div>
+
+  <!-- Floating medical icons -->
+  <div class="floating-icon" style="left:5%;animation-delay:0s;">🩺</div>
+  <div class="floating-icon" style="left:15%;animation-delay:2s;">💊</div>
+  <div class="floating-icon" style="left:25%;animation-delay:4s;">🩸</div>
+  <div class="floating-icon" style="left:35%;animation-delay:6s;">🏥</div>
+  <div class="floating-icon" style="left:45%;animation-delay:1s;">💉</div>
+  <div class="floating-icon" style="left:55%;animation-delay:3s;">🫀</div>
+  <div class="floating-icon" style="left:65%;animation-delay:5s;">🧬</div>
+  <div class="floating-icon" style="left:75%;animation-delay:7s;">🧪</div>
+  <div class="floating-icon" style="left:85%;animation-delay:2.5s;">🦷</div>
+  <div class="floating-icon" style="left:95%;animation-delay:4.5s;">🩻</div>
+  <div class="floating-icon" style="left:10%;animation-delay:9s;">🥗</div>
+  <div class="floating-icon" style="left:80%;animation-delay:10s;">🍎</div>
+
+  <!-- Glass login card -->
+  <div class="login-card p-10 rounded-3xl w-full max-w-md relative z-10">
+    <div class="flex justify-center mb-4"><span class="text-6xl login-logo">🩺</span></div>
+    <h1 class="text-4xl font-extrabold text-center text-white mb-2 drop-shadow-lg tracking-tight">MedConnect</h1>
+    <p class="text-center text-white/90 mb-1 text-sm font-bold">Ethiopia Health Network</p>
+    <p id="login-branch-name" class="text-center text-white/95 mb-4 text-sm font-bold hidden bg-white/20 rounded-full py-1 px-3 inline-block mx-auto"></p>
+    <p class="text-center text-white/85 mb-8 text-xs italic leading-relaxed quote-rotate">"Wherever the art of medicine is loved,<br>there is also a love of humanity."</p>
+    <form id="login-form" class="space-y-4">
+      <div>
+        <label class="block text-sm font-bold mb-2 text-white drop-shadow">Staff ID / Phone</label>
+        <input type="text" id="login-id" required placeholder="e.g., 281519" class="login-input w-full px-4 py-3 border-0 rounded-xl focus:outline-none text-gray-800 font-medium">
+      </div>
+      <div>
+        <label class="block text-sm font-bold mb-2 text-white drop-shadow">Password</label>
+        <input type="password" id="login-password" required placeholder="••••••••" class="login-input w-full px-4 py-3 border-0 rounded-xl focus:outline-none text-gray-800 font-medium">
+      </div>
+      <button type="submit" id="login-btn" class="login-btn w-full text-white font-bold py-3 rounded-xl transform active:scale-95 text-lg">Sign In →</button>
+      <p id="login-error" class="text-red-100 bg-red-500/40 rounded-lg p-2 text-sm text-center hidden font-bold"></p>
+    </form>
+    <div class="mt-6 text-center">
+      <button onclick="openPatientRegister()" class="text-sm font-bold text-white hover:text-yellow-300 hover:underline transition drop-shadow">New Patient? Register Here →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PATIENT REGISTER MODAL -->
+<div id="patient-register-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-[100] flex items-center justify-center fade-in">
+  <div class="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl w-96 border border-gray-100 dark:border-gray-700 relative">
+    <button onclick="closePatientRegister()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-2xl font-bold">&times;</button>
+    <div class="flex justify-center mb-4"><span class="text-4xl">🧑‍🦽</span></div>
+    <h2 class="text-2xl font-extrabold text-center text-gray-800 dark:text-gray-100 mb-6">Patient Registration</h2>
+    <form id="patient-register-form" class="space-y-4">
+      <div><label class="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">Full Name</label>
+        <input type="text" id="reg-name" required placeholder="Your Name" class="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700"></div>
+      <div><label class="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">Phone Number (Your ID)</label>
+        <input type="tel" id="reg-phone" required placeholder="e.g., 0911223344" class="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700"></div>
+      <div><label class="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">Password</label>
+        <input type="password" id="reg-pass" required minlength="6" placeholder="Password (min 6)" class="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700"></div>
+      <button type="submit" id="reg-btn" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-md mt-2">Create Account</button>
+      <p id="reg-error" class="text-red-500 text-sm text-center hidden"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="app-screen" class="hidden flex-1 flex justify-center overflow-hidden">
+  <div class="flex w-full max-w-[1600px] h-full min-w-0">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 hidden md:flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-full shrink-0 shadow-sm z-20 transition-colors">
+      <div class="p-6 flex justify-between items-center border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-800">
+        <h1 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 flex items-center gap-2">🩺 MedConnect</h1>
+        <button onclick="toggleDarkMode()" class="p-2 bg-white dark:bg-gray-700 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition shadow"><span class="dark:hidden text-sm">🌙</span><span class="hidden dark:inline text-sm">☀️</span></button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+        <div>
+          <p class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Main Menu</p>
+          <nav class="space-y-1">
+            <button onclick="switchTab('dashboard')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-dashboard">📊 Dashboard</button>
+            <button onclick="switchTab('feed')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-feed">🏠 Clinical Feed</button>
+            <button onclick="switchTab('messages')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-messages">💬 Messages</button>
+            <button onclick="switchTab('tools')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-tools">🧮 Clinical Tools</button>
+            <button onclick="switchTab('nutrition')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-nutrition">🥗 Nutrition AI Tutor</button>
+          </nav>
+        </div>
+
+        <div id="worker-nav-section" class="hidden">
+          <p class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">My Workspace</p>
+          <nav class="space-y-1">
+            <button onclick="switchTab('workspace')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-workspace">🩺 My Workspace</button>
+          </nav>
+        </div>
+
+        <div id="clinical-extras-nav" class="hidden">
+          <p class="px-3 text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2">Clinical</p>
+          <nav class="space-y-1">
+            <button onclick="switchTab('referrals')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-referrals" style="display:none;">📋 Smart Referrals</button>
+            <button onclick="switchTab('patients')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-patients" style="display:none;">👤 Patient Records</button>
+            <button onclick="switchTab('symptom')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-symptom" style="display:none;">🤖 AI Symptom Checker</button>
+          </nav>
+        </div>
+
+        <div id="branch-admin-nav-section" class="hidden">
+          <p class="px-3 text-xs font-bold text-blue-600 uppercase tracking-wider mb-2">Management</p>
+          <nav class="space-y-1">
+            <button onclick="switchTab('users')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-users">👥 Worker Management</button>
+          </nav>
+        </div>
+
+        <div id="sys-admin-nav-section" class="hidden">
+          <p class="px-3 text-xs font-bold text-red-500 uppercase tracking-wider mb-2">System Administration</p>
+          <nav class="space-y-1">
+            <button onclick="switchTab('sys-dash')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-sys-dash">🖥️ System Health</button>
+            <button onclick="switchTab('branches')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-branches">🏥 Branches</button>
+            <button onclick="switchTab('audit')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-audit">📜 Audit Logs</button>
+            <button onclick="switchTab('sys-settings')" class="nav-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300" id="nav-sys-settings">⚙️ System Settings</button>
+          </nav>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+        <div class="flex items-center gap-3 mb-4">
+          <div id="sidebar-avatar" class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">U</div>
+          <div class="overflow-hidden">
+            <p id="sidebar-name" class="font-bold text-sm truncate">Loading...</p>
+            <p id="sidebar-role" class="text-xs text-blue-600 dark:text-blue-400 font-bold">Role</p>
+            <p id="sidebar-branch" class="text-[10px] text-gray-400 truncate">Branch</p>
+          </div>
+        </div>
+        <button onclick="switchTab('settings')" class="w-full mb-2 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-bold hover:bg-gray-200 transition">Change Password</button>
+        <button id="logout-btn" class="w-full py-2 bg-white dark:bg-gray-700 border border-red-200 dark:border-gray-600 text-red-600 dark:text-red-400 rounded-lg font-bold hover:bg-red-50 dark:hover:bg-gray-600 transition">Logout</button>
+      </div>
+    </aside>
+
+    <!-- CENTER -->
+    <main class="flex-1 min-w-0 border-r border-gray-200 dark:border-gray-700 h-full overflow-y-auto bg-gray-50 dark:bg-gray-900 relative transition-colors p-6">
+
+      <!-- DASHBOARD -->
+      <div id="view-dashboard" class="view-section fade-in hidden">
+        <h2 class="text-2xl font-bold mb-6">Welcome back, <span id="dash-name">User</span> 👋 <span id="dash-role-badge" class="text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full ml-2 align-middle"></span></h2>
+        <div id="dash-stats" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+          <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <h3 id="dash-chart-title-1" class="font-bold mb-2">Chart 1</h3><canvas id="dashboardChart1" height="150"></canvas></div>
+          <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <h3 id="dash-chart-title-2" class="font-bold mb-2">Chart 2</h3><canvas id="dashboardChart2" height="150"></canvas></div>
+        </div>
+
+        <!-- HEALTH INSTRUMENTS -->
+        <div class="mb-10">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">🔬 My Health Instruments</h2>
+              <p class="text-sm text-gray-500">Real clinical tools for your role — how to use, when to use, and what problems they detect.</p>
+            </div>
+          </div>
+          <div id="instruments-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold mb-4">Patient Education Hub</h2>
+          <div id="edu-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+        </div>
+      </div>
+
+      <!-- WORKSPACE -->
+      <div id="view-workspace" class="view-section fade-in hidden">
+        <div id="workspace-hero" class="workspace-hero"><div class="workspace-hero-content"><div>
+          <h2 class="text-3xl font-extrabold drop-shadow-lg">My Workspace</h2>
+          <p id="workspace-role-badge" class="text-sm bg-white/30 backdrop-blur-sm px-3 py-1 rounded-full mt-2 inline-block font-bold"></p>
+        </div></div></div>
+        <div id="workspace-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      </div>
+
+      <!-- NUTRITION AI TUTOR -->
+      <div id="view-nutrition" class="view-section fade-in hidden h-full flex flex-col">
+        <div class="mb-4">
+          <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">🥗 Nutrition & Food-Health AI Tutor</h2>
+          <p class="text-sm text-gray-500">Learn how food affects every part of the body — vitamins, minerals, diseases, Ethiopian foods & more.</p>
+        </div>
+        <div class="flex-1 flex gap-4 min-h-0">
+          <div class="w-64 shrink-0 bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-3 overflow-y-auto">
+            <h3 class="font-bold text-xs uppercase text-gray-500 mb-2 px-2">Quick Topics</h3>
+            <div class="space-y-1" id="nutri-topic-list"></div>
+          </div>
+          <div class="flex-1 flex flex-col bg-white dark:bg-gray-800 rounded-2xl border shadow-sm overflow-hidden min-w-0">
+            <div class="p-3 border-b bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-800 flex items-center gap-2">
+              <span class="text-2xl">🤖</span>
+              <div><p class="font-bold text-sm">Nutrition AI</p><p class="text-xs text-green-600 dark:text-green-400 font-bold">Ask anything about food & health</p></div>
+              <button onclick="clearNutriChat()" class="ml-auto text-xs font-bold text-gray-500 hover:text-red-500">🗑️ Clear</button>
+            </div>
+            <div id="nutri-chat-area" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+            <div class="p-3 border-t">
+              <div class="trans-bar mb-2">
+                <button type="button" class="trans-btn vt" onclick="toggleNutriMic()" id="nutri-mic-btn">🎤 Voice→Text</button>
+                <button type="button" class="trans-btn tv" onclick="speakText(document.getElementById('nutri-input').value,'English')">🔊 Text→Voice</button>
+                <select id="nutri-lang" class="text-xs border rounded-lg p-1.5 bg-white dark:bg-gray-700 font-bold">
+                  <option>English</option><option>Amharic</option><option>Afaan Oromoo</option><option>Tigrinya</option>
+                </select>
+                <button type="button" class="trans-btn tt" onclick="translateNutriInput()">🌐 Text→Text</button>
+                <button type="button" class="trans-btn vv" onclick="voiceToVoiceNutri()">🔁 Voice→Voice</button>
+              </div>
+              <div class="flex gap-2">
+                <input type="text" id="nutri-input" placeholder="e.g., How does salt affect blood pressure?" class="flex-1 p-3 border rounded-xl bg-gray-50 dark:bg-gray-700 text-sm">
+                <button onclick="askNutrition()" id="nutri-send" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 rounded-xl hover:from-green-600 hover:to-emerald-700">Ask</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FEED -->
+      <div id="view-feed" class="view-section fade-in hidden">
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border mb-6">
+          <div class="flex gap-3">
+            <div id="feed-avatar" class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full flex items-center justify-center font-bold text-lg shrink-0">U</div>
+            <div class="flex-1 min-w-0">
+              <textarea id="post-content" rows="2" placeholder="Share a case, photo, or update…" class="w-full bg-gray-50 dark:bg-gray-700 p-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"></textarea>
+              <div id="feed-media-preview" class="hidden"></div>
+              <input type="file" id="file-image" class="hidden" accept="image/*">
+              <input type="file" id="file-video" class="hidden" accept="video/*">
+
+              <!-- 4-mode translation toolbar -->
+              <div class="trans-bar mt-3">
+                <button type="button" class="trans-btn vt" id="post-mic-btn" onclick="togglePostMic()">🎤 Voice→Text</button>
+                <button type="button" class="trans-btn tv" onclick="speakPostText()">🔊 Text→Voice</button>
+                <button type="button" class="trans-btn tt" onclick="translateDraft()">🌐 Text→Text</button>
+                <button type="button" class="trans-btn vv" onclick="voiceToVoicePost()">🔁 Voice→Voice</button>
+                <select id="translate-lang" class="text-xs border rounded-lg p-1.5 bg-white dark:bg-gray-700 font-bold">
+                  <option>English</option><option>Amharic</option><option>Afaan Oromoo</option><option>Tigrinya</option>
+                </select>
+                <button type="button" class="p-2 hover:bg-blue-100 rounded-full" onclick="document.getElementById('file-image').click()" title="Photo">📷</button>
+                <button type="button" class="p-2 hover:bg-blue-100 rounded-full" onclick="document.getElementById('file-video').click()" title="Video">🎥</button>
+                <button type="button" id="post-voice-btn" onclick="toggleFeedVoiceRecord()" class="p-2 hover:bg-red-50 rounded-full text-gray-500" title="Record Audio">🎙️</button>
+                <button id="post-btn" onclick="submitPost()" class="ml-auto bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-full font-bold hover:from-blue-600 hover:to-purple-700 shadow">Post</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="feed-container" class="space-y-4"></div>
+      </div>
+
+      <!-- MESSAGES -->
+      <div id="view-messages" class="view-section fade-in hidden h-full flex flex-col">
+        <h2 class="text-2xl font-bold mb-4">Secure Messages</h2>
+        <div class="bg-white dark:bg-gray-800 flex-1 rounded-2xl shadow-sm border flex overflow-hidden min-h-0">
+          <div class="w-1/3 border-r flex flex-col bg-gray-50 dark:bg-gray-800">
+            <div class="p-4 border-b"><h3 class="font-bold text-gray-500 text-xs uppercase">Select Staff</h3></div>
+            <div id="chat-staff-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+          </div>
+          <div class="w-2/3 flex flex-col bg-white dark:bg-gray-900 min-w-0">
+            <div class="p-4 border-b shadow-sm z-10 flex justify-between items-center">
+              <div><h3 class="font-bold" id="chat-header-name">Select a contact</h3><p class="text-xs text-gray-500" id="chat-header-role"></p></div>
+              <button onclick="sendSMS()" class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold hover:bg-green-200">📱 SMS</button>
+            </div>
+            <div class="flex-1 p-4 overflow-y-auto space-y-4" id="chat-messages-area"></div>
+            <div class="p-3 bg-white dark:bg-gray-800 border-t">
+              <!-- 4-mode translation toolbar -->
+              <div class="trans-bar mb-2">
+                <button type="button" class="trans-btn vt" id="chat-mic-btn" onclick="toggleChatMic()">🎤 Voice→Text</button>
+                <button type="button" class="trans-btn tv" onclick="speakText(document.getElementById('chat-input').value, document.getElementById('chat-translate-lang').value)">🔊 Text→Voice</button>
+                <button type="button" class="trans-btn tt" onclick="translateChatInput()">🌐 Text→Text</button>
+                <button type="button" class="trans-btn vv" onclick="voiceToVoice()">🔁 Voice→Voice</button>
+                <select id="chat-translate-lang" class="text-xs border rounded-lg p-1.5 bg-white dark:bg-gray-700 font-bold">
+                  <option>English</option><option>Amharic</option><option>Afaan Oromoo</option><option>Tigrinya</option>
+                </select>
+                <input type="file" id="chat-file-input" class="hidden" accept="image/*,application/pdf,audio/*">
+                <button type="button" onclick="document.getElementById('chat-file-input').click()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full" title="Attach">📎</button>
+                <button type="button" id="chat-rec-btn" onclick="toggleChatVoiceRecord()" class="p-2 hover:bg-red-50 rounded-full" title="Record Audio">🎙️</button>
+              </div>
+              <div class="flex gap-2">
+                <input type="text" id="chat-input" placeholder="Type a message..." class="flex-1 p-3 border rounded-xl bg-gray-50 dark:bg-gray-700">
+                <button onclick="sendChatMessage()" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold px-6 py-3 rounded-xl hover:from-blue-600 hover:to-purple-700">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOOLS -->
+      <div id="view-tools" class="view-section fade-in hidden">
+        <h2 class="text-2xl font-bold mb-6">Clinical & Medical Tools</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border">
+            <h3 class="font-bold text-lg mb-4 text-blue-600">⚖️ BMI Calculator</h3>
+            <div class="space-y-3">
+              <input type="number" id="bmi-weight" placeholder="Weight (kg)" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700">
+              <input type="number" id="bmi-height" placeholder="Height (cm)" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700">
+              <button onclick="calculateBMI()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">Calculate</button>
+              <div id="bmi-result" class="text-center font-bold text-lg mt-2"></div>
+            </div>
+          </div>
+          <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border">
+            <h3 class="font-bold text-lg mb-4 text-pink-500">🤰 Due Date</h3>
+            <div class="space-y-3">
+              <input type="date" id="edd-lmp" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700">
+              <button onclick="calculateEDD()" class="w-full bg-pink-500 text-white font-bold py-2 rounded-lg hover:bg-pink-600">Calculate</button>
+              <div id="edd-result" class="text-center font-bold text-lg mt-2"></div>
+            </div>
+          </div>
+          <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border">
+            <h3 class="font-bold text-lg mb-4 text-green-600">💧 IV Drip Rate</h3>
+            <div class="space-y-3">
+              <input type="number" id="iv-volume" placeholder="Volume (mL)" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700">
+              <input type="number" id="iv-time" placeholder="Time (Hours)" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700">
+              <select id="iv-factor" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700">
+                <option value="20">Macrodrip (20 gtt/mL)</option><option value="60">Microdrip (60 gtt/mL)</option>
+              </select>
+              <button onclick="calculateIV()" class="w-full bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700">Calculate</button>
+              <div id="iv-result" class="text-center font-bold text-lg mt-2"></div>
+            </div>
+          </div>
+          <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border">
+            <h3 class="font-bold text-lg mb-4 text-purple-600">🧠 Glasgow Coma Scale</h3>
+            <div class="space-y-2">
+              <select id="gcs-eye" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-sm"><option value="4">Eyes: Spontaneous (4)</option><option value="3">Eyes: To speech (3)</option><option value="2">Eyes: To pain (2)</option><option value="1">Eyes: None (1)</option></select>
+              <select id="gcs-verbal" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-sm"><option value="5">Verbal: Oriented (5)</option><option value="4">Verbal: Confused (4)</option><option value="3">Verbal: Inappropriate words (3)</option><option value="2">Verbal: Sounds (2)</option><option value="1">Verbal: None (1)</option></select>
+              <select id="gcs-motor" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-sm"><option value="6">Motor: Obeys (6)</option><option value="5">Localizes pain (5)</option><option value="4">Normal flexion (4)</option><option value="3">Abnormal flexion (3)</option><option value="2">Extension (2)</option><option value="1">None (1)</option></select>
+              <button onclick="calculateGCS()" class="w-full bg-purple-600 text-white font-bold py-2 rounded-lg hover:bg-purple-700">Calculate</button>
+              <div id="gcs-result" class="text-center font-bold text-lg mt-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SYMPTOM -->
+      <div id="view-symptom" class="view-section fade-in hidden">
+        <h2 class="text-2xl font-bold mb-6">AI Symptom Checker</h2>
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border max-w-2xl mx-auto">
+          <div class="text-center mb-6"><span class="text-5xl">🤖</span></div>
+          <textarea id="symptom-input" rows="4" placeholder="Describe symptoms…" class="w-full p-4 border rounded-xl bg-gray-50 dark:bg-gray-700 mb-4"></textarea>
+          <button onclick="checkSymptoms()" id="symptom-btn" class="w-full bg-purple-600 text-white font-bold py-3 rounded-xl hover:bg-purple-700">Analyze</button>
+          <div id="symptom-result" class="mt-6 p-6 rounded-xl bg-purple-50 dark:bg-purple-900/20 hidden border border-purple-200"></div>
+        </div>
+      </div>
+
+      <!-- WORKER MGMT -->
+      <div id="view-users" class="view-section fade-in hidden">
+        <div id="branch-context-banner" class="hidden mb-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl p-5 shadow-md">
+          <p class="text-xs font-bold uppercase opacity-80">Managing Branch</p>
+          <h2 id="branch-context-name" class="text-2xl font-extrabold mt-1">—</h2>
+        </div>
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
+          <h2 class="text-2xl font-bold">Worker Management</h2>
+          <button onclick="document.getElementById('create-staff-form').classList.toggle('hidden')" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md">+ Create Worker</button>
+        </div>
+        <div id="worker-stats" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"></div>
+        <form id="create-staff-form" class="hidden bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border space-y-3 mb-6 max-w-md">
+          <input type="text" id="staff-name" placeholder="Full Name" required class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+          <input type="text" id="staff-id" placeholder="Unique Staff ID" required class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+          <input type="password" id="staff-pass" placeholder="Temporary Password" required class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+          <select id="staff-branch" class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700 font-bold"><option value="">Select Branch...</option></select>
+          <select id="staff-role" required class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700 font-bold"></select>
+          <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 shadow-md">Create Account</button>
+        </form>
+        <div class="mb-4 flex items-center gap-2">
+          <input type="text" id="worker-search" placeholder="🔍 Search by name or staff ID…" oninput="renderWorkerTable()" class="flex-1 max-w-md p-2.5 border rounded-lg bg-white dark:bg-gray-800 text-sm">
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border overflow-hidden">
+          <table class="w-full text-left border-collapse">
+            <thead><tr class="bg-gray-50 dark:bg-gray-700 text-gray-500 text-sm uppercase">
+              <th class="p-4 font-bold">Staff ID</th><th class="p-4 font-bold">Full Name</th><th class="p-4 font-bold">Role</th><th class="p-4 font-bold text-right">Actions</th>
+            </tr></thead>
+            <tbody id="user-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BRANCHES -->
+      <div id="view-branches" class="view-section fade-in hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Health Center Branches</h2>
+          <button onclick="document.getElementById('create-branch-form').classList.toggle('hidden')" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700">+ Add Branch</button>
+        </div>
+        <form id="create-branch-form" class="hidden bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border space-y-3 mb-6 max-w-md">
+          <input type="text" id="branch-name" placeholder="Branch Name" required class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+          <input type="text" id="branch-location" placeholder="Location" required class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+          <input type="text" id="branch-slug" placeholder="URL Slug" class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+          <hr class="my-2"><h3 class="font-bold text-blue-600">Admin Details</h3>
+          <input type="text" id="ba-name" placeholder="Admin Full Name" required class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+          <input type="text" id="ba-staff-id" placeholder="Admin Staff ID" required class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+          <input type="password" id="ba-pass" placeholder="Password" required class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+          <button type="submit" id="create-branch-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Create</button>
+        </form>
+        <div id="branch-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+      </div>
+
+      <!-- REFERRALS / PATIENTS / SYSTEM -->
+      <div id="view-referrals" class="view-section fade-in hidden">
+        <h2 class="text-2xl font-bold mb-6">Smart Referral Engine</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border">
+            <h3 class="font-bold text-lg mb-4">New Referral</h3>
+            <form id="referral-form" class="space-y-4">
+              <input type="text" id="ref-patient" required placeholder="Patient Name" class="w-full border p-2 rounded-lg text-sm bg-gray-50 dark:bg-gray-700">
+              <select id="ref-dept" class="w-full border p-2 rounded-lg text-sm bg-gray-50 dark:bg-gray-700"><option>Cardiology</option><option>Pediatrics</option><option>General Surgery</option></select>
+              <select id="ref-urgency" class="w-full border p-2 rounded-lg text-sm bg-gray-50 dark:bg-gray-700"><option value="Routine">Routine</option><option value="Urgent">Urgent</option><option value="Emergency">Emergency</option></select>
+              <textarea id="ref-notes" rows="2" placeholder="Clinical Notes..." class="w-full border p-2 rounded-lg text-sm bg-gray-50 dark:bg-gray-700"></textarea>
+              <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">Submit</button>
+            </form>
+          </div>
+          <div class="lg:col-span-2 space-y-4" id="referrals-container"></div>
+        </div>
+      </div>
+      <div id="view-patients" class="view-section fade-in hidden"><h2 class="text-2xl font-bold mb-6">Patient Records</h2><div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><p class="text-gray-500 text-sm">Patient records would load here.</p></div></div>
+      <div id="view-sys-dash" class="view-section fade-in hidden">
+        <h2 class="text-2xl font-bold mb-6">System Health & Status</h2>
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><canvas id="sysChart" height="100"></canvas></div>
+      </div>
+      <div id="view-audit" class="view-section fade-in hidden"><h2 class="text-2xl font-bold mb-6">System Audit Logs</h2><div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border">Security & Activity Events</div></div>
+      <div id="view-sys-settings" class="view-section fade-in hidden"><h2 class="text-2xl font-bold mb-6">Global System Settings</h2><div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border">Settings</div></div>
+      <div id="view-settings" class="view-section fade-in hidden">
+        <h2 class="text-2xl font-bold mb-6">Change Password</h2>
+        <form id="change-password-form" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border space-y-3 max-w-md">
+          <input type="password" id="new-password" placeholder="Enter new password" required class="w-full border p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+          <button type="submit" class="w-full bg-gray-800 text-white font-bold py-3 rounded-lg hover:bg-gray-900">Update Password</button>
+        </form>
+      </div>
+      <div id="view-education" class="view-section fade-in hidden"></div>
+    </main>
+
+    <aside class="w-80 hidden lg:block p-6 h-full overflow-y-auto shrink-0 bg-white dark:bg-gray-800 border-l">
+      <button id="start-conf-btn" onclick="startConference()" class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-2xl shadow-lg font-bold text-lg mb-6 flex items-center justify-center gap-2 hover:from-red-600 hover:to-red-700">
+        <span class="animate-pulse">🔴</span> Start Live Conference
+      </button>
+      <div class="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 p-5 rounded-2xl border mb-6">
+        <img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=400&q=80" class="rounded-xl mb-3 w-full h-32 object-cover">
+        <h3 class="font-bold text-sm">"The best way to find yourself is to lose yourself in the service of others."</h3>
+        <p class="text-xs text-gray-500 font-bold mt-2">- Mahatma Gandhi</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ══════════════ CONFERENCE WITH LIVE TRANSLATOR ══════════════ -->
+<div id="conference-modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex">
+  <div class="flex-1 flex flex-col min-w-0">
+    <div class="bg-gray-900 text-white p-3 flex justify-between items-center">
+      <h3 class="font-bold text-lg">🔴 Live Conference</h3>
+      <button onclick="closeConference()" class="text-white hover:text-red-400 font-bold text-2xl">&times;</button>
+    </div>
+    <iframe id="jitsi-iframe" allow="camera; microphone; fullscreen" class="flex-1 border-0 bg-black"></iframe>
+  </div>
+  <div class="w-80 bg-gray-900 border-l border-gray-700 flex flex-col">
+    <div class="p-3 border-b border-gray-700">
+      <h4 class="text-white font-bold flex items-center gap-2">🌐 Live Translator</h4>
+      <p class="text-xs text-gray-400 mt-1">Voice↔Text ↔ Translate ↔ Speak</p>
+    </div>
+    <div id="conf-transcript" class="flex-1 overflow-y-auto p-3 space-y-1"></div>
+    <div class="p-3 border-t border-gray-700 space-y-2">
+      <div class="flex gap-1 flex-wrap">
+        <button onclick="confStartListen()" id="conf-listen-btn" class="flex-1 bg-red-600 text-white text-xs font-bold px-2 py-2 rounded-lg hover:bg-red-700">🎙️ Listen (V→T)</button>
+        <button onclick="confStopListen()" class="flex-1 bg-gray-700 text-white text-xs font-bold px-2 py-2 rounded-lg hover:bg-gray-600">⏹️ Stop</button>
+      </div>
+      <div class="flex gap-1 items-center">
+        <select id="conf-target-lang" class="text-xs border-0 rounded-lg p-2 bg-gray-800 text-white font-bold flex-1">
+          <option>English</option><option>Amharic</option><option>Afaan Oromoo</option><option>Tigrinya</option>
+        </select>
+        <label class="text-xs text-gray-300 flex items-center gap-1"><input type="checkbox" id="conf-auto-speak" checked> 🔊 Auto-speak</label>
+      </div>
+      <div class="flex gap-1">
+        <input id="conf-typed" placeholder="Type to translate & speak" class="flex-1 text-xs p-2 rounded-lg bg-gray-800 text-white border-0">
+        <button onclick="confTypedToVoice()" class="bg-purple-600 text-white text-xs font-bold px-3 rounded-lg">🔊</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PART 2 STARTS HERE — Reply "PART 2" to get the full
+     <script> block with all translation + upload fixes.
+     ═══════════════════════════════════════════════════════════ -->
+     <script>
+// ═══════════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════════
+const SUPABASE_URL = '__SUPABASE_URL__';
+const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
+const BRANCH_SLUG = '__BRANCH_SLUG__';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null, userProfile = null, branchContext = null;
+let postRecognition = null, isPostRecording = false;
+let chatRecognition = null, isChatRecording = false;
+let nutriRecognition = null;
+let confRecognition = null, confIsListening = false;
+let dashChart1 = null, dashChart2 = null, sysChartInstance = null;
+let chatPartnerId = null, chatInterval = null;
+let allWorkers = [];
+let pendingImageFile = null, pendingVideoFile = null, pendingAudioBlob = null;
+let feedRecorder = null, feedChunks = [];
+let chatRecorder = null, chatChunks = [];
+
+const ROLE_LABELS = {
+  admin:'System Admin', super_admin:'Super Admin', branch_admin:'Branch Admin',
+  doctor:'Doctor', surgeon:'Surgeon', nurse:'Nurse', midwife:'Midwife',
+  lab_tech:'Lab Technician', radiologist:'Radiologist', pharmacist:'Pharmacist',
+  physiotherapist:'Physiotherapist', dentist:'Dentist', receptionist:'Receptionist',
+  billing_staff:'Billing Staff', hr_manager:'HR Manager', it_support:'IT Support', patient:'Patient'
+};
+const BRANCH_WORKER_ROLES = ['doctor','surgeon','nurse','midwife','lab_tech','radiologist','pharmacist','physiotherapist','dentist','receptionist','billing_staff','hr_manager','it_support','patient'];
+const SYSTEM_ROLES = [...BRANCH_WORKER_ROLES,'branch_admin','admin','super_admin'];
+const REFERRAL_ROLES = ['doctor','surgeon','nurse'];
+const PATIENT_RECORD_ROLES = ['doctor','surgeon','nurse','midwife','receptionist'];
+const SYMPTOM_ROLES = ['doctor','nurse','surgeon','patient'];
+
+const ROLE_HERO_IMAGES = {
+  doctor:'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=1200&q=80',
+  surgeon:'https://images.unsplash.com/photo-1551601651-2a8555f1a136?auto=format&fit=crop&w=1200&q=80',
+  nurse:'https://images.unsplash.com/photo-1584982751601-97dcc096659c?auto=format&fit=crop&w=1200&q=80',
+  midwife:'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=1200&q=80',
+  lab_tech:'https://images.unsplash.com/photo-1582719471384-894fbb16e074?auto=format&fit=crop&w=1200&q=80',
+  radiologist:'https://images.unsplash.com/photo-1516069677018-378515003435?auto=format&fit=crop&w=1200&q=80',
+  pharmacist:'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=1200&q=80',
+  physiotherapist:'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1200&q=80',
+  dentist:'https://images.unsplash.com/photo-1606811971618-4486d14f3f99?auto=format&fit=crop&w=1200&q=80',
+  receptionist:'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80',
+  billing_staff:'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1200&q=80',
+  hr_manager:'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1200&q=80',
+  it_support:'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+  patient:'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1200&q=80',
+  admin:'https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1200&q=80',
+  super_admin:'https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1200&q=80',
+  branch_admin:'https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1200&q=80'
+};
+
+const LANG_CODES = { English:'en-US', Amharic:'am-ET', 'Afaan Oromoo':'om-ET', Tigrinya:'ti-ET' };
+
+// ═══════════════════════════════════════════════════════════
+//  TRANSLATION HELPERS (client-side, backend-optional)
+// ═══════════════════════════════════════════════════════════
+const LANG_SHORT = {
+  English:'en', Amharic:'am', 'Afaan Oromoo':'om', Tigrinya:'ti',
+  Arabic:'ar', French:'fr', Spanish:'es', Swahili:'sw', Somali:'so'
+};
+
+function detectLang(text) {
+  if (/[\u1200-\u137F]/.test(text)) return 'Amharic';
+  return 'English';
+}
+
+function decodeHtml(t) {
+  const d = document.createElement('textarea');
+  d.innerHTML = t;
+  return d.value;
+}
+
+function isImageUrl(url) {
+  return /^data:image\//i.test(url) || /\.(jpe?g|png|gif|webp|bmp|svg)(\?.*)?$/i.test(url);
+}
+function isAudioUrl(url) {
+  return /^data:audio\//i.test(url) || /\.(webm|mp3|wav|ogg|m4a|aac)(\?.*)?$/i.test(url);
+}
+function isVideoUrl(url) {
+  return /^data:video\//i.test(url) || /\.(mp4|mov|webm|avi)(\?.*)?$/i.test(url);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BRANCH & THEME
+// ═══════════════════════════════════════════════════════════
+async function loadBranchContext() {
+  if (!BRANCH_SLUG) return;
+  const nameEl = document.getElementById('login-branch-name');
+  try {
+    const res = await fetch(`/api/branch/${encodeURIComponent(BRANCH_SLUG)}`);
+    if (res.ok) {
+      branchContext = await res.json();
+      nameEl.innerText = `📍 ${branchContext.name}${branchContext.location ? ' — ' + branchContext.location : ''}`;
+      nameEl.classList.remove('hidden');
+    }
+  } catch(e) { console.error(e); }
+}
+loadBranchContext();
+
+if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+function toggleDarkMode() {
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+}
+
+function showToast(msg, type='success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `px-6 py-3 rounded-xl shadow-lg text-white font-bold transition-all transform translate-x-full ${
+    type==='success'?'bg-gradient-to-r from-green-500 to-emerald-600':
+    type==='error'?'bg-gradient-to-r from-red-500 to-rose-600':
+    'bg-gradient-to-r from-blue-500 to-indigo-600'}`;
+  t.innerText = msg; c.appendChild(t);
+  setTimeout(()=>t.classList.remove('translate-x-full'),10);
+  setTimeout(()=>{t.classList.add('translate-x-full'); setTimeout(()=>t.remove(),300);},3500);
+}
+
+function switchTab(tabId) {
+  document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+  const viewEl = document.getElementById(`view-${tabId}`);
+  if (viewEl) viewEl.classList.remove('hidden');
+  document.querySelectorAll('aside nav button').forEach(el => el.classList.remove('nav-active'));
+  const navBtn = document.getElementById(`nav-${tabId}`);
+  if (navBtn) navBtn.classList.add('nav-active');
+
+  if (tabId==='users') loadUsersTable();
+  if (tabId==='referrals') loadReferrals();
+  if (tabId==='dashboard') loadDashboard();
+  if (tabId==='sys-dash') loadSysDash();
+  if (tabId==='branches') loadBranches();
+  if (tabId==='messages') loadChatStaff();
+  if (tabId==='workspace') loadWorkerWorkspace();
+  if (tabId==='feed') loadFeed();
+  if (tabId==='nutrition') initNutrition();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DASHBOARD DATA BY ROLE
+// ═══════════════════════════════════════════════════════════
+function getDashboardDataForRole(role) {
+  const W=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const line=(t,d,c)=>({title:t,config:{type:'line',data:{labels:W,datasets:[{data:d,borderColor:c,backgroundColor:c+'33',fill:true,tension:.4}]},options:{responsive:true,plugins:{legend:{display:false}}}}});
+  const bar=(t,d,c)=>({title:t,config:{type:'bar',data:{labels:W,datasets:[{data:d,backgroundColor:c,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}}}}});
+  const doughnut=(t,l,d,c)=>({title:t,config:{type:'doughnut',data:{labels:l,datasets:[{data:d,backgroundColor:c,borderWidth:0}]},options:{responsive:true,cutout:'75%'}}});
+  const s=(l,v,c)=>({label:l,value:v,colorClass:c});
+  const cfg = {
+    doctor:{stats:[s('My Patients',12,'from-blue-500 to-blue-600'),s('Pending Referrals',3,'from-orange-500 to-orange-600'),s('Consultations',8,'from-green-500 to-green-600'),s('Critical Alerts',1,'from-red-500 to-red-600')],chart1:line('Consultations',[5,7,4,9,8,6,3],'#3b82f6'),chart2:doughnut('Referrals',['Routine','Urgent','Emergency'],[6,3,1],['#10b981','#f59e0b','#ef4444'])},
+    surgeon:{stats:[s('Surgeries',2,'from-red-500 to-red-600'),s('Post-Op',5,'from-blue-500 to-blue-600'),s('Upcoming',3,'from-orange-500 to-orange-600'),s('OR',2,'from-green-500 to-green-600')],chart1:bar('Surgeries',[1,2,1,3,2,1,2],'#ef4444'),chart2:doughnut('Outcomes',['Successful','Complicated','Pending'],[18,1,2],['#10b981','#ef4444','#f59e0b'])},
+    nurse:{stats:[s('Triage',5,'from-purple-500 to-purple-600'),s('Vitals Due',7,'from-orange-500 to-orange-600'),s('Rounds',12,'from-green-500 to-green-600'),s('Critical',2,'from-red-500 to-red-600')],chart1:bar('Vitals',[8,11,9,14,12,10,7],'#8b5cf6'),chart2:doughnut('Triage',['Stable','Urgent','Critical'],[5,2,1],['#10b981','#f59e0b','#ef4444'])},
+    midwife:{stats:[s('Labor',1,'from-pink-500 to-pink-600'),s('Prenatal',8,'from-purple-500 to-purple-600'),s('Deliveries',4,'from-green-500 to-green-600'),s('Newborns',6,'from-blue-500 to-blue-600')],chart1:line('Prenatal',[3,5,4,6,5,7,4],'#ec4899'),chart2:doughnut('Delivery',['Normal','C-Section','Assisted'],[12,3,2],['#10b981','#3b82f6','#f59e0b'])},
+    lab_tech:{stats:[s('Pending',8,'from-orange-500 to-orange-600'),s('Collected',15,'from-blue-500 to-blue-600'),s('Ready',11,'from-green-500 to-green-600'),s('Urgent',2,'from-red-500 to-red-600')],chart1:bar('Tests',[12,15,10,18,16,13,9],'#f97316'),chart2:doughnut('Types',['Blood','Urine','Stool','Other'],[40,20,8,5],['#ef4444','#f59e0b','#10b981','#3b82f6'])},
+    radiologist:{stats:[s('Pending',4,'from-indigo-500 to-indigo-600'),s('Reports',2,'from-orange-500 to-orange-600'),s('Urgent',1,'from-red-500 to-red-600'),s('Done',6,'from-green-500 to-green-600')],chart1:bar('Scans',[4,6,5,8,7,6,4],'#6366f1'),chart2:doughnut('Modality',['X-Ray','CT','MRI','US'],[18,6,4,8],['#3b82f6','#8b5cf6','#ec4899','#10b981'])},
+    pharmacist:{stats:[s('Queue',4,'from-green-500 to-green-600'),s('Low Stock',3,'from-red-500 to-red-600'),s('Filled',22,'from-blue-500 to-blue-600'),s('Controlled',2,'from-orange-500 to-orange-600')],chart1:bar('Dispensed',[18,25,20,28,24,19,15],'#10b981'),chart2:doughnut('Categories',['Antibiotic','Analgesic','Cardio','Other'],[15,10,6,5],['#3b82f6','#f59e0b','#ef4444','#8b5cf6'])},
+    physiotherapist:{stats:[s('Today',6,'from-teal-500 to-teal-600'),s('Pending',2,'from-orange-500 to-orange-600'),s('Week',28,'from-green-500 to-green-600'),s('New',3,'from-blue-500 to-blue-600')],chart1:line('Sessions',[4,6,5,7,6,4,3],'#14b8a6'),chart2:doughnut('Types',['Ortho','Neuro','Sports','Rehab'],[12,5,6,5],['#3b82f6','#8b5cf6','#10b981','#f59e0b'])},
+    dentist:{stats:[s('Appts',7,'from-cyan-500 to-cyan-600'),s('Pending',4,'from-orange-500 to-orange-600'),s('New',2,'from-blue-500 to-blue-600'),s('Week',22,'from-green-500 to-green-600')],chart1:bar('Procedures',[5,7,6,9,8,6,4],'#06b6d4'),chart2:doughnut('Types',['Clean','Fill','Extract','Canal'],[12,8,4,2],['#10b981','#3b82f6','#f59e0b','#ef4444'])},
+    receptionist:{stats:[s('Check-ins',14,'from-blue-500 to-blue-600'),s('New Reg',5,'from-green-500 to-green-600'),s('Booked',8,'from-purple-500 to-purple-600'),s('No-Shows',2,'from-red-500 to-red-600')],chart1:line('Registrations',[10,14,11,16,13,9,7],'#3b82f6'),chart2:doughnut('By Dept',['OPD','Pediatrics','Cardio','Other'],[14,6,4,3],['#3b82f6','#8b5cf6','#ef4444','#f59e0b'])},
+    billing_staff:{stats:[s('Unpaid',14,'from-red-500 to-red-600'),s('Claims',5,'from-orange-500 to-orange-600'),s('Today',8000,'from-green-500 to-green-600'),s('Overdue',3,'from-yellow-500 to-yellow-600')],chart1:bar('Collections',[5,7,6,9,8,6,4],'#10b981'),chart2:doughnut('Methods',['Cash','Mobile','Ins','Card'],[40,25,20,15],['#10b981','#3b82f6','#f59e0b','#8b5cf6'])},
+    hr_manager:{stats:[s('Leave',3,'from-purple-500 to-purple-600'),s('Pending',2,'from-orange-500 to-orange-600'),s('Staff',18,'from-green-500 to-green-600'),s('Hires',1,'from-blue-500 to-blue-600')],chart1:bar('Attendance',[95,92,98,94,97,90,93],'#8b5cf6'),chart2:doughnut('Leave',['Sick','Annual','Mat','Other'],[5,8,2,3],['#ef4444','#3b82f6','#ec4899','#f59e0b'])},
+    it_support:{stats:[s('Open',4,'from-red-500 to-red-600'),s('Resolved',3,'from-green-500 to-green-600'),s('Network','On','from-blue-500 to-blue-600'),s('Avg',18,'from-purple-500 to-purple-600')],chart1:bar('Tickets',[2,4,3,5,4,2,1],'#ef4444'),chart2:doughnut('Categories',['Hardware','Software','Network','Other'],[3,4,2,1],['#3b82f6','#8b5cf6','#10b981','#f59e0b'])},
+    patient:{stats:[s('Appts',2,'from-blue-500 to-blue-600'),s('Results',3,'from-green-500 to-green-600'),s('Rx',1,'from-purple-500 to-purple-600'),s('Health','92','from-orange-500 to-orange-600')],chart1:line('BP',[120,118,122,119,121,117,120],'#3b82f6'),chart2:doughnut('Upcoming',['Doc','Lab','Pharm','Follow'],[1,1,1,1],['#3b82f6','#10b981','#8b5cf6','#f59e0b'])}
+  };
+  return cfg[role] || cfg.doctor;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HEALTH INSTRUMENTS
+// ═══════════════════════════════════════════════════════════
+const INSTRUMENTS = {
+  doctor:[
+    {icon:'🩺',name:'Stethoscope',how:'Place earpieces in ears, chest piece on skin over heart (left chest) or lungs (back, both sides). Ask patient to breathe deeply. Listen for 30s each area.',when:'Every physical exam: chest pain, cough, SOB, fever, routine check-up.',problems:'Heart murmurs, arrhythmias, wheezing (asthma), crackles (pneumonia/heart failure), pleural rub.'},
+    {icon:'💓',name:'Sphygmomanometer (BP)',how:'Patient seated, arm at heart level. Wrap cuff 2 cm above elbow. Inflate to ~180 mmHg then release slowly. Record systolic (first sound) and diastolic (last sound).',when:'Every visit. Essential for hypertension, diabetes, pregnancy, elderly.',problems:'Hypertension (>140/90), hypotension (<90/60), pre-eclampsia in pregnancy.'},
+    {icon:'🌡️',name:'Thermometer',how:'Oral: under tongue 30s. Axillary: armpit 1 min. Rectal (infants): 1 min. Note route used.',when:'Fever, chills, infection suspected, post-op monitoring.',problems:'Fever (>38°C), hypothermia (<35°C), malaria, typhoid, COVID, sepsis.'},
+    {icon:'👂',name:'Otoscope',how:'Hold handle like pen. Pull ear back/up (adult) or down/back (child). Insert speculum gently, look at tympanic membrane (pearly grey, cone of light).',when:'Ear pain, hearing loss, discharge, fever in children.',problems:'Otitis media (red bulging eardrum), perforation, wax impaction, foreign body.'},
+    {icon:'👁️',name:'Ophthalmoscope',how:'Dim lights. Ask patient to look at fixed point. Get close, look through lens at red reflex. Rotate lens dial to focus retina, vessels, optic disc.',when:'Headache, vision changes, hypertension, diabetes (diabetic retinopathy).',problems:'Papilledema (raised ICP), diabetic retinopathy, hypertensive retinopathy, cataracts.'},
+    {icon:'💉',name:'Pulse Oximeter',how:'Clip on finger, nail visible. Wait 30s until waveform stable. Read SpO₂ and pulse. Warm cold hands first.',when:'Respiratory distress, asthma, pneumonia, COVID, post-op.',problems:'Hypoxia (SpO₂ <94%), respiratory failure, silent hypoxia.'},
+    {icon:'💧',name:'Glucometer',how:'Wash hands. Prick side of fingertip with lancet. Touch blood drop to test strip. Read result in 5–10 s.',when:'Diabetes, altered consciousness, seizures, before meals in diabetics.',problems:'Hypoglycemia (<3.9 mmol/L), hyperglycemia (>11 mmol/L), diabetic ketoacidosis.'}
+  ],
+  surgeon:[
+    {icon:'🔪',name:'Scalpel (#10 blade)',how:'Hold like pencil. Cut perpendicular to skin with firm pressure. Use a fresh blade per incision. Discard in sharps bin.',when:'Skin incisions, excisions, drain insertion.',problems:'(The instrument itself - used in all surgical procedures).'},
+    {icon:'⚡',name:'Electrocautery',how:'Attach grounding pad on dry muscle. Set desired power. Use tip to cut or coagulate tissue. Keep tip clean.',when:'Bleeding control, cutting tissue, removing small lesions.',problems:'Hemostasis in surgery; risk of burns if pad loose.'},
+    {icon:'🩻',name:'Retractor (Langenbeck)',how:'Assistant holds retractor to keep wound edges apart. Steady traction, avoid nerve compression.',when:'Exposing deep surgical fields, abdominal surgery.',problems:'Provides surgical exposure.'},
+    {icon:'🩹',name:'Surgical Stapler',how:'Position jaws across tissue. Fire trigger. Releases row of titanium staples. Check alignment after firing.',when:'Skin closure, bowel anastomosis, lung resection.',problems:'Rapid wound closure, anastomosis.'}
+  ],
+  nurse:[
+    {icon:'💓',name:'BP Monitor',how:'Seated, arm supported. Cuff 2cm above elbow. Inflate, release slowly. Note systolic/diastolic.',when:'Every admission, every 4h inpatients, pre-op, emergency.',problems:'Hypertension, hypotension, shock.'},
+    {icon:'🌡️',name:'Thermometer',how:'Oral/axillary/rectal. 30s–1min. Record route.',when:'Every 4h, fever complaints, post-op.',problems:'Infection, sepsis, hypothermia.'},
+    {icon:'💉',name:'Pulse Oximeter',how:'Clip on finger. Wait 30s. Read SpO₂.',when:'Respiratory patients, post-op, ICU.',problems:'Hypoxia, respiratory failure.'},
+    {icon:'💧',name:'Glucometer',how:'Prick fingertip, apply blood to strip. Read result.',when:'Diabetics, altered patients, pre-meals.',problems:'Hypo/hyperglycemia.'},
+    {icon:'💉',name:'IV Infusion Pump',how:'Prime tubing, load cassette, set rate (mL/h), connect to patient. Monitor site for swelling.',when:'Accurate drug delivery, antibiotics, fluids, chemotherapy.',problems:'Prevents fluid overload, dosing errors.'},
+    {icon:'🌬️',name:'Nebulizer',how:'Fill cup with prescribed drug + saline. Connect mask. Turn on. Breathe normally 10 min.',when:'Asthma attack, COPD, bronchospasm.',problems:'Relieves wheeze, dyspnea.'}
+  ],
+  midwife:[
+    {icon:'👶',name:'Fetal Doppler',how:'Gel on abdomen. Place probe over fetal heart (below umbilicus). Move slowly. Count beats for 60s.',when:'Antenatal visits after 12 weeks, labor monitoring.',problems:'Fetal distress, heart rate <110 or >160.'},
+    {icon:'📈',name:'CTG (Cardiotocograph)',how:'Two belts: one for fetal HR, one for contractions. Record 20–30 min. Interpret baseline, variability, accelerations, decelerations.',when:'Labor, high-risk pregnancy, decreased fetal movement.',problems:'Fetal hypoxia, cord compression, placental insufficiency.'},
+    {icon:'📏',name:'Pelvimeter',how:'Measure pelvic diameters externally. Assess for CPD.',when:'Antenatal screening, suspected obstructed labor.',problems:'Cephalopelvic disproportion, obstructed labor risk.'},
+    {icon:'🩺',name:'Delivery Kit',how:'Sterile gloves, scissors, cord clamp, drape, bulb syringe, oxytocin. Lay out before delivery.',when:'Every delivery.',problems:'Safe delivery, newborn resuscitation, infection prevention.'}
+  ],
+  lab_tech:[
+    {icon:'🔬',name:'Microscope',how:'Place slide on stage, secure with clips. Start on 10x, then 40x, then 100x (oil). Adjust focus knob slowly.',when:'Blood smears (malaria), urine sediment, gram stains, sputum AFB.',problems:'Malaria parasites, bacteria, casts, crystals, TB bacilli.'},
+    {icon:'🌀',name:'Centrifuge',how:'Balance tubes opposite each other. Close lid. Set RPM and time. Wait to stop completely.',when:'Separating serum/plasma, urine sediment, blood grouping.',problems:'Enables clean sample analysis.'},
+    {icon:'🧪',name:'Spectrophotometer',how:'Blank with water/reagent. Insert cuvette with sample. Read absorbance. Compare to standard curve.',when:'Hemoglobin, bilirubin, glucose, creatinine, liver enzymes.',problems:'Anemia, jaundice, diabetes, renal failure, hepatitis.'},
+    {icon:'🩸',name:'Hematology Analyzer',how:'Aspirate well-mixed whole blood. Read auto results (CBC: Hb, WBC, platelets).',when:'Suspected anemia, infection, bleeding disorders.',problems:'Anemia, leukocytosis, thrombocytopenia.'}
+  ],
+  radiologist:[
+    {icon:'🩻',name:'X-Ray',how:'Position patient between tube & detector. Shield gonads/thyroid. Set kVp & mAs per body part. Ask patient to hold breath.',when:'Fractures, chest infections, TB, foreign bodies.',problems:'Fractures, pneumonia, TB, pneumothorax, bowel obstruction.'},
+    {icon:'🧠',name:'CT Scan',how:'Patient lies on table, contrast may be IV/oral. Table moves through rotating ring. 5–15 min.',when:'Head injury, stroke, abdominal pain, trauma.',problems:'Hemorrhage, tumors, clots, fractures, appendicitis.'},
+    {icon:'🧲',name:'MRI',how:'Screen for metal (pacemakers, implants). Patient lies still 20–60 min. Warn about loud noise.',when:'Brain/spine/joint soft tissue, tumors, ligament tears.',problems:'Strokes, disc herniation, MS, tumors, ligament injury.'},
+    {icon:'🌀',name:'Ultrasound',how:'Gel on skin. Move probe slowly. Real-time imaging.',when:'Pregnancy, gallstones, kidney stones, cardiac function, thyroid.',problems:'Gallstones, kidney stones, fetal abnormalities, ascites.'}
+  ],
+  pharmacist:[
+    {icon:'⚖️',name:'Analytical Balance',how:'Level it. Zero it. Weigh small quantities with spatula. Clean after use.',when:'Compounding drugs, preparing doses.',problems:'Accurate dosing.'},
+    {icon:'🧴',name:'Mortar & Pestle',how:'Place solid in mortar. Grind with pestle in circular motion. Mix thoroughly.',when:'Compounding powders, suspensions, ointments.',problems:'For patients unable to swallow tablets.'},
+    {icon:'❄️',name:'Vaccine Refrigerator',how:'Keep 2–8°C. Log temperature twice daily. Never freeze vaccines (except some).',when:'Storing vaccines, insulin, some antibiotics.',problems:'Prevents vaccine failure.'}
+  ],
+  physiotherapist:[
+    {icon:'⚡',name:'TENS Unit',how:'Place electrodes on painful area. Set frequency (80–120 Hz acute). Increase intensity until tingling.',when:'Chronic pain, back pain, arthritis, post-op pain.',problems:'Pain relief through nerve stimulation.'},
+    {icon:'📏',name:'Goniometer',how:'Align center with joint. Arms along bones. Measure joint angle (0–180°).',when:'Assessing range of motion in joints.',problems:'Joint stiffness, contracture, muscle weakness.'},
+    {icon:'🔊',name:'Therapeutic Ultrasound',how:'Apply gel. Move head in circles 5–10 min. Set intensity 0.5–2 W/cm².',when:'Soft tissue injury, tendonitis, scar tissue.',problems:'Deep tissue healing, pain reduction.'}
+  ],
+  dentist:[
+    {icon:'🦷',name:'Dental Mirror',how:'Hold like pen. Angle mirror to visualize hidden tooth surfaces.',when:'Every examination.',problems:'Caries, plaque, calculus on posterior teeth.'},
+    {icon:'🪡',name:'Dental Explorer',how:'Run tip over tooth surface. Feel for roughness, pit, or cavity.',when:'Checking occlusal and interproximal surfaces.',problems:'Early caries, cracks, calculus.'},
+    {icon:'🩻',name:'Dental X-Ray',how:'Bitewing/periapical. Bite on sensor. Assess caries depth, roots, bone.',when:'Suspected deep caries, root canal, wisdom teeth.',problems:'Deep caries, abscess, impacted teeth, bone loss.'}
+  ],
+  receptionist:[
+    {icon:'🌡️',name:'Thermometer',how:'Forehead or oral. Record.',when:'Every patient at intake if fever suspected.',problems:'Fever screening.'},
+    {icon:'⚖️',name:'Height/Weight Scale',how:'Shoes off. Stand straight. Read height. Step on scale for weight.',when:'Every new patient, growth monitoring.',problems:'BMI calculation, malnutrition screening.'}
+  ],
+  patient:[
+    {icon:'🌡️',name:'Home Thermometer',how:'Oral 30s or armpit 1 min. Record result.',when:'Feeling feverish, chills.',problems:'Fever - contact doctor if >38.5°C.'},
+    {icon:'💓',name:'Home BP Monitor',how:'Seated, arm supported. Rest 5 min first. Take 2 readings 1 min apart.',when:'Hypertension follow-up.',problems:'Track BP trends.'}
+  ],
+  admin:[],super_admin:[],branch_admin:[]
+};
+
+function renderInstruments(role) {
+  const list = INSTRUMENTS[role] || INSTRUMENTS.doctor;
+  const grid = document.getElementById('instruments-grid');
+  if (!grid) return;
+  if (!list.length) { grid.innerHTML = `<p class="text-gray-500 col-span-full">No clinical instruments for your role.</p>`; return; }
+  grid.innerHTML = list.map(i => `
+    <div class="instr-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-pointer" onclick="this.classList.toggle('open')">
+      <div class="p-5">
+        <div class="flex items-start gap-3">
+          <span class="instr-icon">${i.icon}</span>
+          <div class="flex-1 min-w-0">
+            <h4 class="font-bold text-sm text-gray-800 dark:text-gray-100">${i.name}</h4>
+            <p class="text-xs text-gray-500 mt-0.5">Tap to see how to use</p>
+          </div>
+          <span class="text-gray-400 text-lg">▾</span>
+        </div>
+        <div class="instr-detail mt-4 space-y-3 text-xs border-t pt-3 border-gray-100 dark:border-gray-700">
+          <div><p class="font-bold text-blue-600 dark:text-blue-400 mb-1">📖 How to use</p><p class="text-gray-700 dark:text-gray-300 leading-relaxed">${i.how}</p></div>
+          <div><p class="font-bold text-amber-600 dark:text-amber-400 mb-1">⏱️ When to use</p><p class="text-gray-700 dark:text-gray-300 leading-relaxed">${i.when}</p></div>
+          <div><p class="font-bold text-red-600 dark:text-red-400 mb-1">⚠️ Detects problems</p><p class="text-gray-700 dark:text-gray-300 leading-relaxed">${i.problems}</p></div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function loadDashboard() {
+  if (!userProfile) return;
+  const roleStr = String(userProfile.role).toLowerCase().replace(/\s+/g,'_');
+  const data = getDashboardDataForRole(roleStr);
+  document.getElementById('dash-role-badge').innerText = ROLE_LABELS[roleStr] || userProfile.role;
+  document.getElementById('dash-stats').innerHTML = data.stats.map(s => `
+    <div class="bg-gradient-to-br ${s.colorClass} p-5 rounded-2xl shadow-lg text-white">
+      <p class="text-sm font-bold opacity-80">${s.label}</p>
+      <p class="text-3xl font-extrabold">${s.value}</p>
+    </div>`).join('');
+  document.getElementById('dash-chart-title-1').innerText = data.chart1.title;
+  document.getElementById('dash-chart-title-2').innerText = data.chart2.title;
+  if (dashChart1) dashChart1.destroy();
+  if (dashChart2) dashChart2.destroy();
+  dashChart1 = new Chart(document.getElementById('dashboardChart1').getContext('2d'), data.chart1.config);
+  dashChart2 = new Chart(document.getElementById('dashboardChart2').getContext('2d'), data.chart2.config);
+  renderInstruments(roleStr);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WORKSPACE
+// ═══════════════════════════════════════════════════════════
+function loadWorkerWorkspace() {
+  if (!userProfile) return;
+  const role = String(userProfile.role).toLowerCase().replace(/\s+/g,'_');
+  document.getElementById('workspace-role-badge').innerText = ROLE_LABELS[role] || userProfile.role;
+  const heroImg = ROLE_HERO_IMAGES[role] || ROLE_HERO_IMAGES.doctor;
+  document.getElementById('workspace-hero').style.backgroundImage = `url('${heroImg}')`;
+  const container = document.getElementById('workspace-content');
+  const ws = {
+    doctor:`<div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-blue-600 mb-4">🩺 Pending Referrals</h3><p class="text-3xl font-extrabold">3</p><button onclick="switchTab('referrals')" class="mt-4 text-sm font-bold text-blue-500 hover:underline">View →</button></div><div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-green-600 mb-4">👤 My Patients</h3><p class="text-3xl font-extrabold">12</p><button onclick="switchTab('patients')" class="mt-4 text-sm font-bold text-green-500 hover:underline">View →</button></div><div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-purple-600 mb-4">🥗 Nutrition Tutor</h3><button onclick="switchTab('nutrition')" class="w-full mt-2 bg-purple-600 text-white font-bold py-2 rounded-lg">Open</button></div>`,
+    nurse:`<div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-purple-600 mb-4">🛏️ Triage Queue</h3><p class="text-3xl font-extrabold">5</p></div><div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-blue-600 mb-4">🧮 Tools</h3><button onclick="switchTab('tools')" class="w-full mt-2 bg-blue-600 text-white font-bold py-2 rounded-lg">Open</button></div>`,
+    midwife:`<div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-pink-600 mb-4">👶 Active Labor</h3><p class="text-3xl font-extrabold">1</p></div><div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-purple-600 mb-4">🤰 Prenatal</h3><p class="text-3xl font-extrabold">8</p></div>`,
+    surgeon:`<div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-red-600 mb-4">🔪 Surgeries Today</h3><p class="text-3xl font-extrabold">2</p></div>`,
+    lab_tech:`<div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-orange-600 mb-4">🧪 Pending Tests</h3><p class="text-3xl font-extrabold">8</p></div>`,
+    radiologist:`<div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-indigo-600 mb-4">🩻 Pending Scans</h3><p class="text-3xl font-extrabold">4</p></div>`,
+    pharmacist:`<div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-green-600 mb-4">💊 Dispense Queue</h3><p class="text-3xl font-extrabold">4</p></div>`,
+    patient:`<div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg text-blue-600 mb-4">📅 Appointments</h3><p class="text-3xl font-extrabold">2</p></div>`
+  };
+  container.innerHTML = ws[role] || `<div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border"><h3 class="font-bold text-lg">⚙️ Admin Workspace</h3><p class="text-sm text-gray-500 mt-2">Use sidebar tools to manage your branch.</p></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CLINICAL TOOLS
+// ═══════════════════════════════════════════════════════════
+function calculateBMI(){const w=+document.getElementById('bmi-weight').value,h=+document.getElementById('bmi-height').value/100;if(!w||!h)return showToast('Enter both','error');const b=(w/(h*h)).toFixed(1);const s=b<18.5?'Underweight':b<25?'Normal':b<30?'Overweight':'Obese';document.getElementById('bmi-result').innerHTML=`BMI: ${b} (<span class="${s==='Normal'?'text-green-500':'text-red-500'}">${s}</span>)`;}
+function calculateEDD(){const l=new Date(document.getElementById('edd-lmp').value);if(isNaN(l.getTime()))return showToast('Invalid date','error');const e=new Date(l.getTime()+280*86400000);document.getElementById('edd-result').innerText=`Due: ${e.toDateString()}`;}
+function calculateIV(){const v=+document.getElementById('iv-volume').value,t=+document.getElementById('iv-time').value,f=+document.getElementById('iv-factor').value;if(!v||!t)return showToast('Enter values','error');document.getElementById('iv-result').innerText=`${Math.round((v*f)/(t*60))} drops/min`;}
+function calculateGCS(){const t=+document.getElementById('gcs-eye').value+ +document.getElementById('gcs-verbal').value+ +document.getElementById('gcs-motor').value;const s=t>=13?'Mild':t>=9?'Moderate':'Severe';document.getElementById('gcs-result').innerHTML=`Score: ${t} (<span class="${s==='Severe'?'text-red-500':'text-yellow-500'}">${s}</span>)`;}
+
+async function checkSymptoms() {
+  const text = document.getElementById('symptom-input').value;
+  if (!text) return showToast('Describe symptoms first','error');
+  const btn = document.getElementById('symptom-btn'), resEl = document.getElementById('symptom-result');
+  btn.innerText = 'Analyzing...'; resEl.classList.remove('hidden'); resEl.innerHTML = '<span class="animate-pulse">AI is thinking…</span>';
+  try {
+    const res = await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:`Analyze symptoms: ${text}`,targetLang:'English'})});
+    const data = await res.json();
+    if (data.choices) resEl.innerHTML = `<h4 class="font-bold mb-2">AI Analysis:</h4><p>${data.choices[0].message.content.replace(/\n/g,'<br>')}</p>`;
+    else throw new Error();
+  } catch { resEl.innerHTML = '<p class="text-red-500">Backend not available. Configure /api/translate.</p>'; }
+  btn.innerText = 'Analyze';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MEDIA UPLOAD — Storage first, then base64 fallback
+// ═══════════════════════════════════════════════════════════
+async function uploadMedia(file, folder='posts') {
+  if (!file) return null;
+
+  try {
+    const ext = (file.name || 'file').split('.').pop() ||
+                (file.type.includes('audio') ? 'webm' : 'bin');
+    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await db.storage
+      .from('medical-files')
+      .upload(path, file, { upsert: true, cacheControl: '3600' });
+
+    if (!error) {
+      const { data } = db.storage.from('medical-files').getPublicUrl(path);
+      if (data?.publicUrl) return data.publicUrl;
+    } else {
+      console.warn('Storage upload failed, using base64 fallback:', error.message);
+    }
+  } catch (e) {
+    console.warn('Storage exception, using base64 fallback:', e);
+  }
+
+  if (file.size <= 900_000) {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Could not read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  throw new Error('Upload failed — storage bucket missing or file too large (>900KB). Create a public "medical-files" bucket in Supabase.');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SPEECH + TRANSLATION (with MyMemory + backend fallback)
+// ═══════════════════════════════════════════════════════════
+function speakText(text, lang='English') {
+  if (!text) return showToast('Nothing to speak','error');
+  if (!('speechSynthesis' in window)) return showToast('TTS not supported','error');
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = LANG_CODES[lang] || 'en-US';
+  window.speechSynthesis.speak(u);
+}
+
+async function translateText(text, targetLang, sourceLang) {
+  if (!text || !text.trim()) return text;
+
+  const tgt = LANG_SHORT[targetLang] || 'en';
+  const src = LANG_SHORT[sourceLang] || LANG_SHORT[detectLang(text)] || 'en';
+
+  if (src === tgt) {
+    showToast(`Already in ${targetLang || 'target language'}`, 'info');
+    return text;
+  }
+
+  // Chunk to 450 chars for MyMemory free tier
+  const chunks = [];
+  let cur = '';
+  for (const word of text.split(/(\s+)/)) {
+    if ((cur + word).length > 450) { if (cur) chunks.push(cur); cur = word; }
+    else cur += word;
+  }
+  if (cur) chunks.push(cur);
+
+  let out = '';
+  let anySuccess = false;
+
+  for (const chunk of chunks) {
+    let translated = chunk;
+    try {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${src}|${tgt}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const candidate = data?.responseData?.translatedText;
+      if (data?.responseStatus === 200 && candidate) {
+        translated = decodeHtml(candidate);
+        if (/PLEASE SELECT TWO DISTINCT LANGUAGES/i.test(translated)) translated = chunk;
+        else anySuccess = true;
+      }
+    } catch (e) { console.warn('MyMemory failed:', e); }
+    out += translated;
+  }
+
+  if (anySuccess) return out;
+
+  // Backend fallback
+  try {
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, targetLang, sourceLang })
+    });
+    const data = await res.json();
+    if (data.choices?.[0]?.message?.content) {
+      const c = data.choices[0].message.content;
+      if (!/PLEASE SELECT TWO DISTINCT LANGUAGES/i.test(c)) return c;
+    }
+    if (data.translatedText) return data.translatedText;
+  } catch (e) { console.warn('Backend translate failed:', e); }
+
+  showToast('Translation unavailable — showing original', 'error');
+  return text;
+}
+
+function makeRecognizer({lang='en-US', onFinal, onEnd, onStart}) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showToast('Speech recognition not supported','error'); return null; }
+  const r = new SR();
+  r.lang = lang; r.continuous = true; r.interimResults = false;
+  r.onresult = (e) => {
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++)
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+    if (final && onFinal) onFinal(final);
+  };
+  r.onend = () => { if (onEnd) onEnd(); };
+  r.onstart = () => { if (onStart) onStart(); };
+  return r;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FEED
+// ═══════════════════════════════════════════════════════════
+document.getElementById('file-image').addEventListener('change', (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  pendingImageFile = f; pendingVideoFile = null; pendingAudioBlob = null;
+  renderFeedPreview(`<img src="${URL.createObjectURL(f)}" class="max-h-48 rounded-lg">`);
+});
+document.getElementById('file-video').addEventListener('change', (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  pendingVideoFile = f; pendingImageFile = null; pendingAudioBlob = null;
+  renderFeedPreview(`<video controls src="${URL.createObjectURL(f)}" class="max-h-48 rounded-lg"></video>`);
+});
+function renderFeedPreview(innerHTML) {
+  const el = document.getElementById('feed-media-preview');
+  el.className = 'media-preview';
+  el.innerHTML = `${innerHTML}<button onclick="clearFeedMedia()" class="absolute top-2 right-2 bg-red-500 text-white w-7 h-7 rounded-full font-bold">×</button>`;
+  el.classList.remove('hidden');
+}
+function clearFeedMedia() {
+  pendingImageFile = pendingVideoFile = pendingAudioBlob = null;
+  document.getElementById('file-image').value = '';
+  document.getElementById('file-video').value = '';
+  const el = document.getElementById('feed-media-preview');
+  el.classList.add('hidden'); el.innerHTML = '';
+}
+
+postRecognition = makeRecognizer({
+  onFinal: (t) => { document.getElementById('post-content').value += t; },
+  onEnd: () => { isPostRecording = false; document.getElementById('post-mic-btn').classList.remove('mic-active'); }
+});
+function togglePostMic() {
+  if (!postRecognition) return showToast('Speech recognition not supported','error');
+  if (isPostRecording) { postRecognition.stop(); }
+  else {
+    try {
+      postRecognition.start(); isPostRecording = true;
+      document.getElementById('post-mic-btn').classList.add('mic-active');
+      showToast('Listening (Voice→Text)…','info');
+    } catch(e) {}
+  }
+}
+
+function speakPostText() {
+  const t = document.getElementById('post-content').value;
+  const lang = document.getElementById('translate-lang').value;
+  if (!t) return showToast('Type something first','error');
+  speakText(t, lang);
+}
+
+async function translateDraft() {
+  const el = document.getElementById('post-content');
+  const lang = document.getElementById('translate-lang').value;
+  if (!el.value) return showToast('Type text first','error');
+  const orig = el.value; el.value = 'Translating…';
+  const out = await translateText(orig, lang);
+  el.value = out;
+  showToast(`Translated → ${lang}`);
+}
+
+async function voiceToVoicePost() {
+  const lang = document.getElementById('translate-lang').value;
+  showToast(`Voice→Voice: speak now (target ${lang})`, 'info');
+  const r = makeRecognizer({
+    lang: 'en-US',
+    onFinal: async (text) => {
+      r.stop();
+      showToast(`Heard: "${text}"`, 'info');
+      const translated = await translateText(text, lang);
+      document.getElementById('post-content').value = translated;
+      speakText(translated, lang);
+      showToast(`Translated → ${lang} & spoken`);
+    }
+  });
+  if (r) { try { r.start(); } catch(e) {} }
+}
+
+async function toggleFeedVoiceRecord() {
+  if (feedRecorder && feedRecorder.state === 'recording') { feedRecorder.stop(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    feedRecorder = new MediaRecorder(stream); feedChunks = [];
+    feedRecorder.ondataavailable = e => feedChunks.push(e.data);
+    feedRecorder.onstop = () => {
+      const blob = new Blob(feedChunks, {type:'audio/webm'});
+      pendingAudioBlob = blob; pendingImageFile = pendingVideoFile = null;
+      document.getElementById('post-voice-btn').classList.remove('mic-active');
+      renderFeedPreview(`<audio controls src="${URL.createObjectURL(blob)}" class="w-full"></audio><p class="text-xs text-green-600 mt-1">✓ Voice recorded — click Post to share</p>`);
+      stream.getTracks().forEach(t => t.stop());
+    };
+    feedRecorder.start();
+    document.getElementById('post-voice-btn').classList.add('mic-active');
+    showToast('Recording… click 🎙️ again to stop','info');
+  } catch { showToast('Mic access denied','error'); }
+}
+
+async function submitPost() {
+  const content = document.getElementById('post-content').value.trim();
+  const hasMedia = !!(pendingImageFile || pendingVideoFile || pendingAudioBlob);
+  if (!content && !hasMedia) return showToast('Write something or add media','error');
+  if (!currentUser) return showToast('Not signed in','error');
+
+  const btn = document.getElementById('post-btn');
+  btn.innerText = 'Posting…'; btn.disabled = true;
+
+  try {
+    let mediaUrl = null, mediaType = null;
+
+    if (pendingImageFile) {
+      mediaType = 'image';
+      mediaUrl  = await uploadMedia(pendingImageFile, 'posts');
+    } else if (pendingVideoFile) {
+      mediaType = 'video';
+      mediaUrl  = await uploadMedia(pendingVideoFile, 'posts');
+    } else if (pendingAudioBlob) {
+      mediaType = 'audio';
+      const bf = new File([pendingAudioBlob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+      mediaUrl = await uploadMedia(bf, 'posts');
+    }
+
+    if (hasMedia && !mediaUrl) throw new Error('Media upload failed. Try a smaller file.');
+
+    const { error } = await db.from('posts').insert([{
+      author_id: currentUser.id,
+      content:   content || '',
+      media_url: mediaUrl,
+      media_type: mediaType
+    }]);
+    if (error) throw error;
+
+    document.getElementById('post-content').value = '';
+    clearFeedMedia();
+    showToast('Posted!');
+    loadFeed();
+  } catch (err) {
+    console.error(err);
+    showToast(err.message || 'Post failed', 'error');
+  } finally {
+    btn.innerText = 'Post'; btn.disabled = false;
+  }
+}
+
+function renderPostMedia(p) {
+  if (!p.media_url) return '';
+  const url = p.media_url, t = p.media_type;
+  if (t === 'image' || isImageUrl(url))
+    return `<img src="${url}" class="w-full rounded-xl mt-3 max-h-[500px] object-contain bg-black" loading="lazy" onclick="window.open('${url}','_blank')" style="cursor:pointer">`;
+  if (t === 'video' || isVideoUrl(url))
+    return `<video controls src="${url}" class="w-full rounded-xl mt-3 max-h-[500px] bg-black"></video>`;
+  if (t === 'audio' || isAudioUrl(url))
+    return `<audio controls src="${url}" class="w-full mt-3"></audio>`;
+  return `<a href="${url}" target="_blank" class="block mt-3 text-blue-500 underline">📎 View attachment</a>`;
+}
+
+async function loadFeed() {
+  const { data: posts, error } = await db.from('posts').select(`*, profiles (full_name, role)`).order('created_at',{ascending:false}).limit(50);
+  const container = document.getElementById('feed-container');
+  if (error) { container.innerHTML = `<p class="text-center text-red-500 py-4">${error.message}</p>`; return; }
+  if (!posts || !posts.length) { container.innerHTML = `<p class="text-center text-gray-500 py-4">No posts yet. Be the first to share!</p>`; return; }
+
+  container.innerHTML = posts.map(p => {
+    const safe = (p.content || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border" id="post-${p.id}">
+        <div class="flex gap-3 mb-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full flex items-center justify-center font-bold shrink-0">${p.profiles?.full_name?.charAt(0) || 'U'}</div>
+          <div class="min-w-0 flex-1">
+            <p class="font-bold truncate">${p.profiles?.full_name || 'Unknown'}</p>
+            <p class="text-xs text-gray-500">${(ROLE_LABELS[p.profiles?.role]||p.profiles?.role||'USER').toUpperCase()} • ${new Date(p.created_at).toLocaleString()}</p>
+          </div>
+        </div>
+        ${safe ? `<p class="text-lg whitespace-pre-wrap break-words mb-2" id="post-text-${p.id}">${safe}</p>` : ''}
+        ${renderPostMedia(p)}
+        <div class="trans-bar mt-3">
+          <button type="button" class="trans-btn tt" onclick="translatePostText('${p.id}')">🌐 Text→Text</button>
+          <button type="button" class="trans-btn tv" onclick="speakText(document.getElementById('post-text-${p.id}').innerText,'English')">🔊 Text→Voice</button>
+          <button type="button" class="trans-btn vt" onclick="listenPostVoice('${p.id}')">🎤 Voice→Text</button>
+          <button type="button" class="trans-btn vv" onclick="voiceToVoicePostReply('${p.id}')">🔁 Voice→Voice</button>
+          <select id="post-lang-${p.id}" class="text-xs border rounded-lg p-1.5 bg-white dark:bg-gray-700 font-bold">
+            <option>English</option><option>Amharic</option><option>Afaan Oromoo</option><option>Tigrinya</option>
+          </select>
+          <input type="text" id="post-reply-${p.id}" placeholder="Type reply / translation…" class="flex-1 min-w-[140px] text-xs border rounded-lg p-1.5 bg-white dark:bg-gray-700">
+        </div>
+        <div class="flex flex-wrap gap-4 text-gray-500 font-bold text-sm mt-3 border-t pt-3">
+          <button class="hover:text-red-500">❤️ 0</button>
+          <button class="hover:text-blue-500">💬 Comment</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  window._postContentMap = {};
+  posts.forEach(p => { window._postContentMap[p.id] = p.content || ''; });
+}
+
+async function translatePostText(postId) {
+  const raw = window._postContentMap?.[postId] || '';
+  if (!raw) return showToast('Nothing to translate','error');
+  const lang = document.getElementById(`post-lang-${postId}`).value;
+  showToast('Translating…','info');
+  const out = await translateText(raw, lang);
+  const replyEl = document.getElementById(`post-reply-${postId}`);
+  if (replyEl) replyEl.value = out;
+  showToast(`Translated → ${lang}`);
+}
+function listenPostVoice(postId) {
+  showToast('Listening… speak your comment', 'info');
+  const r = makeRecognizer({
+    onFinal: (text) => {
+      r.stop();
+      const replyEl = document.getElementById(`post-reply-${postId}`);
+      if (replyEl) replyEl.value = text;
+      showToast('Transcribed to reply box');
+    }
+  });
+  if (r) { try { r.start(); } catch(e) {} }
+}
+async function voiceToVoicePostReply(postId) {
+  const lang = document.getElementById(`post-lang-${postId}`).value;
+  showToast(`Voice→Voice reply (target ${lang})`, 'info');
+  const r = makeRecognizer({
+    onFinal: async (text) => {
+      r.stop();
+      const translated = await translateText(text, lang);
+      const replyEl = document.getElementById(`post-reply-${postId}`);
+      if (replyEl) replyEl.value = translated;
+      speakText(translated, lang);
+      showToast('Voice→Voice done');
+    }
+  });
+  if (r) { try { r.start(); } catch(e) {} }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MESSAGES
+// ═══════════════════════════════════════════════════════════
+async function loadChatStaff() {
+  const { data } = await db.from('profiles').select('id, full_name, role').neq('id', currentUser.id).order('full_name');
+  const list = document.getElementById('chat-staff-list');
+  if (!data) return;
+  list.innerHTML = data.map(s => `
+    <div onclick="selectChatPartner('${s.id}','${(s.full_name||'').replace(/'/g,"\\'")}','${s.role}')"
+         class="p-3 bg-white dark:bg-gray-700 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-600 border mb-2">
+      <p class="font-bold text-sm">${s.full_name}</p>
+      <p class="text-xs text-blue-600 font-bold">${ROLE_LABELS[s.role]||s.role}</p>
+    </div>`).join('');
+}
+async function selectChatPartner(id, name, role) {
+  chatPartnerId = id;
+  document.getElementById('chat-header-name').innerText = name;
+  document.getElementById('chat-header-role').innerText = (ROLE_LABELS[role]||role).toUpperCase();
+  loadChatMessages();
+  if (chatInterval) clearInterval(chatInterval);
+  chatInterval = setInterval(loadChatMessages, 3000);
+}
+async function loadChatMessages() {
+  if (!chatPartnerId) return;
+  const { data } = await db.from('direct_messages').select(`*, profiles:sender_id(full_name)`)
+    .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${currentUser.id})`)
+    .order('created_at',{ascending:true});
+  const box = document.getElementById('chat-messages-area');
+  if (!data) return;
+  window._bubbleMap = {};
+  data.forEach(m => { window._bubbleMap[m.id] = m.content || ''; });
+  box.innerHTML = data.map(m => {
+    const isMe = m.sender_id === currentUser.id;
+    let content = m.content ? `<p id="bubble-text-${m.id}">${m.content}</p>` : '';
+    if (m.attachment_url) {
+      const url = m.attachment_url;
+      if (isAudioUrl(url)) content += `<audio controls src="${url}" class="mt-2 w-full max-w-[220px]"></audio>`;
+      else if (isImageUrl(url)) content += `<img src="${url}" class="mt-2 rounded-lg max-w-[220px] cursor-pointer" onclick="window.open('${url}','_blank')">`;
+      else if (isVideoUrl(url)) content += `<video controls src="${url}" class="mt-2 rounded-lg max-w-[220px]"></video>`;
+      else content += `<a href="${url}" target="_blank" class="mt-2 text-sm underline block ${isMe?'text-blue-200':'text-blue-600'}">📄 Attachment</a>`;
+    }
+    const bar = m.content ? `
+      <div class="flex flex-wrap gap-1 mt-2 text-[10px] font-bold">
+        <button onclick="bubbleTranslate('${m.id}')" class="px-2 py-1 rounded bg-purple-100 text-purple-700 hover:bg-purple-200">🌐 T→T</button>
+        <button onclick="speakText(document.getElementById('bubble-text-${m.id}').innerText, document.getElementById('chat-translate-lang').value)" class="px-2 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200">🔊 T→V</button>
+        <button onclick="bubbleListen('${m.id}')" class="px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200">🎤 V→T</button>
+        <button onclick="bubbleVV('${m.id}')" class="px-2 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">🔁 V→V</button>
+      </div>` : '';
+    return `
+      <div class="flex flex-col ${isMe?'items-end':'items-start'}">
+        <span class="text-xs text-gray-500 mb-1">${isMe?'You':(m.profiles?.full_name||'Unknown')}</span>
+        <div class="${isMe?'bubble-me':'bubble-them'} p-3 rounded-xl max-w-[80%] shadow-sm">
+          ${content}${bar}
+        </div>
+      </div>`;
+  }).join('');
+  box.scrollTop = box.scrollHeight;
+}
+async function bubbleTranslate(id) {
+  const raw = window._bubbleMap?.[id] || '';
+  if (!raw) return;
+  const lang = document.getElementById('chat-translate-lang').value;
+  const out = await translateText(raw, lang);
+  const el = document.getElementById('bubble-text-'+id);
+  if (el) el.innerText = out;
+  showToast(`Bubble translated → ${lang}`);
+}
+function bubbleListen(id) {
+  showToast('Listening…','info');
+  const r = makeRecognizer({
+    onFinal: (t) => {
+      r.stop();
+      const el = document.getElementById('bubble-text-'+id);
+      if (el) el.innerText = t;
+      showToast('Transcribed voice → text');
+    }
+  });
+  if (r) { try { r.start(); } catch(e) {} }
+}
+async function bubbleVV(id) {
+  const lang = document.getElementById('chat-translate-lang').value;
+  showToast(`Listening for V→V (target ${lang})`,'info');
+  const r = makeRecognizer({
+    onFinal: async (t) => {
+      r.stop();
+      const translated = await translateText(t, lang);
+      const el = document.getElementById('bubble-text-'+id);
+      if (el) el.innerText = translated;
+      speakText(translated, lang);
+    }
+  });
+  if (r) { try { r.start(); } catch(e) {} }
+}
+
+chatRecognition = makeRecognizer({
+  onFinal: (t) => { document.getElementById('chat-input').value += t; },
+  onEnd: () => {
+    isChatRecording = false;
+    document.getElementById('chat-mic-btn').classList.remove('mic-active');
+    document.getElementById('chat-rec-btn').classList.remove('mic-active');
+  }
+});
+function toggleChatMic() {
+  if (!chatRecognition) return showToast('Speech recognition not supported','error');
+  if (isChatRecording) { chatRecognition.stop(); }
+  else {
+    try { chatRecognition.start(); isChatRecording = true;
+      document.getElementById('chat-mic-btn').classList.add('mic-active');
+      showToast('Listening (Voice→Text)…','info');
+    } catch(e) {}
+  }
+}
+
+async function translateChatInput() {
+  const input = document.getElementById('chat-input');
+  const lang = document.getElementById('chat-translate-lang').value;
+  if (!input.value) return showToast('Type first','error');
+  const orig = input.value; input.value = 'Translating…';
+  const out = await translateText(orig, lang);
+  input.value = out;
+  showToast(`Translated → ${lang}`);
+}
+
+async function voiceToVoice() {
+  const lang = document.getElementById('chat-translate-lang').value;
+  showToast(`Voice→Voice: speak now (target ${lang})`,'info');
+  const r = makeRecognizer({
+    lang:'en-US',
+    onFinal: async (text) => {
+      r.stop();
+      showToast(`Heard: "${text}"`,'info');
+      const translated = await translateText(text, lang);
+      speakText(translated, lang);
+      document.getElementById('chat-input').value = translated;
+      showToast(`Translated → ${lang} & spoken`);
+    }
+  });
+  if (r) { try { r.start(); } catch(e) {} }
+}
+
+async function toggleChatVoiceRecord() {
+  if (!chatPartnerId) return showToast('Select a contact first','error');
+  if (chatRecorder && chatRecorder.state === 'recording') { chatRecorder.stop(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    chatRecorder = new MediaRecorder(stream); chatChunks = [];
+    chatRecorder.ondataavailable = e => chatChunks.push(e.data);
+    chatRecorder.onstop = async () => {
+      const blob = new Blob(chatChunks, { type: 'audio/webm' });
+      const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+      showToast('Uploading voice…', 'info');
+      try {
+        const url = await uploadMedia(file, 'chat');
+        if (!url) throw new Error('Upload failed');
+        await db.from('direct_messages').insert([{
+          sender_id: currentUser.id,
+          receiver_id: chatPartnerId,
+          content: '🎙️ Voice message',
+          attachment_url: url
+        }]);
+        loadChatMessages();
+        showToast('Voice message sent!');
+      } catch (err) { showToast(err.message || 'Voice upload failed', 'error'); }
+      document.getElementById('chat-rec-btn').classList.remove('mic-active');
+      stream.getTracks().forEach(t => t.stop());
+    };
+    chatRecorder.start();
+    document.getElementById('chat-rec-btn').classList.add('mic-active');
+    showToast('Recording… click 🎙️ again to stop','info');
+  } catch { showToast('Mic denied','error'); }
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  if (!input.value || !chatPartnerId) return;
+  await db.from('direct_messages').insert([{sender_id:currentUser.id, receiver_id:chatPartnerId, content:input.value}]);
+  input.value = ''; loadChatMessages();
+}
+document.getElementById('chat-file-input')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file || !chatPartnerId) { e.target.value = ''; return; }
+  showToast('Uploading…', 'info');
+  try {
+    const url = await uploadMedia(file, 'chat');
+    if (!url) throw new Error('Upload failed');
+    await db.from('direct_messages').insert([{
+      sender_id: currentUser.id,
+      receiver_id: chatPartnerId,
+      content: '📎 Attachment',
+      attachment_url: url
+    }]);
+    loadChatMessages();
+    showToast('Sent!');
+  } catch (err) { showToast(err.message || 'Upload failed', 'error'); }
+  e.target.value = '';
+});
+function sendSMS() {
+  if (!chatPartnerId) return showToast('Select a contact first','error');
+  const msg = prompt('SMS message:'); if (!msg) return;
+  showToast(`📱 SMS sent (demo): "${msg.slice(0,30)}…"`);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NUTRITION AI TUTOR
+// ═══════════════════════════════════════════════════════════
+const NUTRI_TOPICS = [
+  'Macronutrients (Protein, Carbs, Fat)','Vitamins A, B, C, D, E, K',
+  'Minerals: Iron, Calcium, Zinc','Ethiopian foods: Teff, Injera, Shiro',
+  'Malnutrition in children','Diabetes diet','Hypertension (salt)',
+  'Pregnancy nutrition','Breastfeeding nutrition','Anemia & iron-rich foods',
+  'Food safety & hygiene','Obesity & weight loss',
+  'Fasting (Orthodox, Ramadan) nutrition','Fiber & gut health','Hydration & water'
+];
+let nutriHistory = [];
+
+function initNutrition() {
+  const listEl = document.getElementById('nutri-topic-list');
+  if (listEl && !listEl.innerHTML) {
+    listEl.innerHTML = NUTRI_TOPICS.map(t => `
+      <button onclick="askNutrition('${t.replace(/'/g,"\\'")}')" class="w-full text-left text-xs p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 font-medium text-gray-700 dark:text-gray-300">${t}</button>`).join('');
+  }
+  if (!nutriHistory.length) {
+    const area = document.getElementById('nutri-chat-area');
+    area.innerHTML = `
+      <div class="nutri-msg-ai p-3 text-sm max-w-[85%]">
+        <p class="font-bold mb-1">👋 Selam! I'm your Nutrition AI Tutor.</p>
+        <p>Ask me anything about how food affects health — vitamins, Ethiopian foods, diseases, pregnancy diets, diabetes, and more. Choose a topic on the left or type below.</p>
+        <div class="mt-2 flex flex-wrap gap-1">
+          ${['Best foods for anemia','Teff health benefits','Diabetes diet in Ethiopia','Food for pregnant mothers'].map(t=>`<button onclick="askNutrition('${t.replace(/'/g,"\\'")}')" class="nutri-pill">${t}</button>`).join('')}
+        </div>
+      </div>`;
+  }
+}
+
+async function askNutrition(questionOverride) {
+  const input = document.getElementById('nutri-input');
+  const question = questionOverride || input.value.trim();
+  if (!question) return;
+  input.value = '';
+  const area = document.getElementById('nutri-chat-area');
+  area.insertAdjacentHTML('beforeend', `<div class="flex justify-end"><div class="nutri-msg-user p-3 text-sm max-w-[85%]">${question}</div></div>`);
+  area.scrollTop = area.scrollHeight;
+  area.insertAdjacentHTML('beforeend', `<div class="nutri-msg-ai p-3 text-sm max-w-[85%]" id="nutri-thinking"><span class="animate-pulse">AI is thinking…</span></div>`);
+  area.scrollTop = area.scrollHeight;
+
+  const prompt = `You are a friendly nutrition educator for Ethiopian healthcare workers and patients. Answer in clear, practical terms. Include: (1) what the food/nutrient does, (2) local Ethiopian examples, (3) health problems if deficient/excess, (4) practical advice. Keep it under 250 words. Question: ${question}`;
+  try {
+    const res = await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:prompt,targetLang:'English'})});
+    const data = await res.json();
+    let answer = data.choices?.[0]?.message?.content || 'Sorry, I could not answer. Try again.';
+    document.getElementById('nutri-thinking').remove();
+    area.insertAdjacentHTML('beforeend', `
+      <div class="flex justify-start">
+        <div class="nutri-msg-ai p-3 text-sm max-w-[85%]">
+          <p>${answer.replace(/\n/g,'<br>')}</p>
+          <div class="flex flex-wrap gap-1 mt-2">
+            <button onclick="speakText(this.closest('.nutri-msg-ai').querySelector('p').innerText, document.getElementById('nutri-lang').value)" class="trans-btn tv">🔊 Listen</button>
+            <button onclick="translateNutriAnswer(this)" class="trans-btn tt">🌐 Translate</button>
+          </div>
+        </div>
+      </div>`);
+    nutriHistory.push({q:question, a:answer});
+    area.scrollTop = area.scrollHeight;
+  } catch(e) {
+    document.getElementById('nutri-thinking')?.remove();
+    area.insertAdjacentHTML('beforeend', `<div class="nutri-msg-ai p-3 text-sm max-w-[85%] text-red-600">Backend not available. Please try later.</div>`);
+  }
+}
+
+function clearNutriChat() {
+  nutriHistory = [];
+  document.getElementById('nutri-chat-area').innerHTML = '';
+  initNutrition();
+}
+
+async function translateNutriAnswer(btn) {
+  const p = btn.closest('.nutri-msg-ai').querySelector('p');
+  const lang = document.getElementById('nutri-lang').value;
+  const out = await translateText(p.innerText, lang);
+  p.innerHTML = out.replace(/\n/g,'<br>');
+  showToast(`Translated → ${lang}`);
+}
+
+nutriRecognition = makeRecognizer({
+  onFinal: (t) => { document.getElementById('nutri-input').value += t; },
+  onEnd: () => { document.getElementById('nutri-mic-btn').classList.remove('mic-active'); }
+});
+function toggleNutriMic() {
+  if (!nutriRecognition) return showToast('Speech recognition not supported','error');
+  const btn = document.getElementById('nutri-mic-btn');
+  if (btn.classList.contains('mic-active')) { nutriRecognition.stop(); }
+  else { try { nutriRecognition.start(); btn.classList.add('mic-active'); showToast('Listening…','info'); } catch(e) {} }
+}
+async function voiceToVoiceNutri() {
+  const lang = document.getElementById('nutri-lang').value;
+  showToast(`Voice→Voice (target ${lang})`,'info');
+  const r = makeRecognizer({
+    onFinal: async (text) => {
+      r.stop();
+      const translated = await translateText(text, lang);
+      document.getElementById('nutri-input').value = translated;
+      speakText(translated, lang);
+      askNutrition(translated);
+    }
+  });
+  if (r) { try { r.start(); } catch(e) {} }
+}
+async function translateNutriInput() {
+  const input = document.getElementById('nutri-input');
+  const lang = document.getElementById('nutri-lang').value;
+  if (!input.value) return;
+  const orig = input.value; input.value = 'Translating…';
+  input.value = await translateText(orig, lang);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONFERENCE + LIVE TRANSLATOR
+// ═══════════════════════════════════════════════════════════
+function startConference() {
+  document.getElementById('conference-modal').classList.remove('hidden');
+  document.getElementById('jitsi-iframe').src =
+    `https://meet.systemli.org/MedConnect-${Math.floor(Math.random()*10000)}#config.prejoinPageEnabled=false`;
+}
+function closeConference() {
+  confStopListen();
+  document.getElementById('conference-modal').classList.add('hidden');
+  document.getElementById('jitsi-iframe').src = '';
+}
+
+function confStartListen() {
+  if (confIsListening) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return showToast('Speech recognition not supported','error');
+  confRecognition = new SR();
+  confRecognition.continuous = true;
+  confRecognition.interimResults = false;
+  confRecognition.onresult = async (e) => {
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (!e.results[i].isFinal) continue;
+      const original = e.results[i][0].transcript.trim();
+      if (!original) continue;
+      const targetLang = document.getElementById('conf-target-lang').value;
+      const translated = await translateText(original, targetLang);
+      const box = document.getElementById('conf-transcript');
+      box.insertAdjacentHTML('beforeend', `
+        <div class="conf-transcript-line" onclick="speakText(this.querySelector('.conf-tr').innerText, document.getElementById('conf-target-lang').value)">
+          <div class="text-xs text-gray-300">${original}</div>
+          <div class="mt-1"><span class="conf-lang-pill">${targetLang}</span> <span class="text-white text-sm conf-tr">${translated}</span></div>
+        </div>`);
+      box.scrollTop = box.scrollHeight;
+      if (document.getElementById('conf-auto-speak').checked) speakText(translated, targetLang);
+    }
+  };
+  confRecognition.onend = () => { if (confIsListening) { try { confRecognition.start(); } catch(e) {} } };
+  confRecognition.onstart = () => {
+    confIsListening = true;
+    document.getElementById('conf-listen-btn').innerText = '🎙️ Listening…';
+    document.getElementById('conf-listen-btn').classList.add('mic-active');
+  };
+  try { confRecognition.start(); } catch(e) { showToast('Recognition error','error'); }
+}
+function confStopListen() {
+  confIsListening = false;
+  if (confRecognition) { try { confRecognition.stop(); } catch(e) {} }
+  const btn = document.getElementById('conf-listen-btn');
+  if (btn) { btn.innerText = '🎙️ Listen (V→T)'; btn.classList.remove('mic-active'); }
+}
+async function confTypedToVoice() {
+  const input = document.getElementById('conf-typed');
+  const lang = document.getElementById('conf-target-lang').value;
+  if (!input.value) return;
+  const original = input.value;
+  const translated = await translateText(original, lang);
+  speakText(translated, lang);
+  const box = document.getElementById('conf-transcript');
+  box.insertAdjacentHTML('beforeend', `
+    <div class="conf-transcript-line" onclick="speakText(this.querySelector('.conf-tr').innerText, document.getElementById('conf-target-lang').value)">
+      <div class="text-xs text-gray-300">${original}</div>
+      <div class="mt-1"><span class="conf-lang-pill">${lang}</span> <span class="text-white text-sm conf-tr">${translated}</span></div>
+    </div>`);
+  box.scrollTop = box.scrollHeight;
+  input.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WORKER MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+async function loadUsersTable() {
+  const isBranchAdmin = String(userProfile.role).toLowerCase().replace(/\s+/g,'_') === 'branch_admin';
+  const banner = document.getElementById('branch-context-banner');
+  const staffBranchEl = document.getElementById('staff-branch');
+  if (isBranchAdmin) {
+    banner.classList.remove('hidden');
+    document.getElementById('branch-context-name').innerText = userProfile.branches?.name || 'Your Branch';
+    staffBranchEl.classList.add('hidden'); staffBranchEl.required = false;
+  } else {
+    banner.classList.add('hidden');
+    staffBranchEl.classList.remove('hidden'); staffBranchEl.required = true;
+    const { data: bData } = await db.from('branches').select('*').order('name');
+    if (bData) staffBranchEl.innerHTML = '<option value="">Select Branch...</option>'+bData.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  }
+  document.getElementById('staff-role').innerHTML = (isBranchAdmin?BRANCH_WORKER_ROLES:SYSTEM_ROLES).map(r=>`<option value="${r}">${ROLE_LABELS[r]||r}</option>`).join('');
+
+  let q = db.from('profiles').select('*, branches(name)').order('full_name');
+  if (isBranchAdmin && userProfile.branch_id) q = q.eq('branch_id', userProfile.branch_id);
+  const { data } = await q;
+  allWorkers = data || [];
+  renderWorkerStats(); renderWorkerTable();
+}
+function renderWorkerStats() {
+  const total = allWorkers.length;
+  const byRole = allWorkers.reduce((a,w)=>{a[w.role]=(a[w.role]||0)+1;return a;},{});
+  const cards=[
+    {l:'Total',v:total,c:'from-blue-500 to-blue-600'},
+    {l:'Doctors',v:(byRole.doctor||0)+(byRole.surgeon||0),c:'from-green-500 to-green-600'},
+    {l:'Nurses',v:(byRole.nurse||0)+(byRole.midwife||0),c:'from-purple-500 to-purple-600'},
+    {l:'Other',v:total-((byRole.doctor||0)+(byRole.surgeon||0)+(byRole.nurse||0)+(byRole.midwife||0)),c:'from-orange-500 to-orange-600'}
+  ];
+  document.getElementById('worker-stats').innerHTML = cards.map(c=>`<div class="bg-gradient-to-br ${c.c} p-4 rounded-2xl shadow-md text-white"><p class="text-xs font-bold opacity-80">${c.l}</p><p class="text-3xl font-extrabold mt-1">${c.v}</p></div>`).join('');
+}
+function renderWorkerTable() {
+  const q = (document.getElementById('worker-search')?.value || '').trim().toLowerCase();
+  const list = q ? allWorkers.filter(w=>(w.full_name||'').toLowerCase().includes(q) || (w.staff_id||'').toLowerCase().includes(q)) : allWorkers;
+  const tbody = document.getElementById('user-table-body');
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500">No workers yet.</td></tr>`; return; }
+  tbody.innerHTML = list.map(u => {
+    const isSelf = u.id === currentUser.id;
+    const canDelete = !isSelf && !['admin','super_admin'].includes(u.role);
+    return `<tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+      <td class="p-4 font-mono text-sm">${u.staff_id||'N/A'}</td>
+      <td class="p-4 font-bold">${u.full_name||'Unknown'}${isSelf?' <span class="text-xs bg-gray-200 px-2 py-0.5 rounded">You</span>':''}</td>
+      <td class="p-4"><span class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-bold px-2 py-1 rounded">${(ROLE_LABELS[u.role]||u.role).toUpperCase()}</span></td>
+      <td class="p-4 text-right">${canDelete?`<button onclick="deleteWorker('${u.id}','${(u.full_name||'').replace(/'/g,"\\'")}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded text-xs font-bold">🗑️ Delete</button>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+async function deleteWorker(userId, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    const res = await fetch('/api/admin/delete-user',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},body:JSON.stringify({userId})});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showToast(`"${name}" deleted`); loadUsersTable();
+  } catch(e) { showToast(e.message,'error'); }
+}
+document.getElementById('create-staff-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button'); const orig = btn.innerText;
+  btn.innerText='Creating…'; btn.disabled=true;
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    let branchId = document.getElementById('staff-branch').value;
+    if (String(userProfile.role).toLowerCase().replace(/\s+/g,'_')==='branch_admin') branchId = userProfile.branch_id;
+    if (!branchId) throw new Error('Select a branch');
+    const res = await fetch('/api/admin/create-user',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},body:JSON.stringify({
+      staffId: document.getElementById('staff-id').value.trim(),
+      fullName: document.getElementById('staff-name').value.trim(),
+      password: document.getElementById('staff-pass').value,
+      role: document.getElementById('staff-role').value,
+      branchId
+    })});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showToast('Worker created!'); e.target.reset(); e.target.classList.add('hidden'); loadUsersTable();
+  } catch(err) { showToast(err.message,'error'); }
+  finally { btn.innerText = orig; btn.disabled = false; }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  BRANCHES
+// ═══════════════════════════════════════════════════════════
+async function loadBranches() {
+  const grid = document.getElementById('branch-grid');
+  grid.innerHTML = '<p class="text-gray-500">Loading…</p>';
+  const { data } = await db.from('branches').select('*').order('name');
+  if (!data?.length) { grid.innerHTML = '<p class="text-gray-500 col-span-full">No branches yet.</p>'; return; }
+  grid.innerHTML = data.map(b => `<div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border">
+    <h3 class="font-bold text-lg">${b.name}</h3>
+    <p class="text-sm text-gray-500 mb-3">${b.location||''}</p>
+    <button onclick="copyBranchLink('${b.slug||b.id}')" class="w-full bg-blue-600 text-white text-sm font-bold py-2 rounded-lg hover:bg-blue-700">🔗 Copy Login Link</button>
+  </div>`).join('');
+}
+function copyBranchLink(slug) {
+  navigator.clipboard.writeText(`${window.location.origin}/b/${slug}`)
+    .then(() => showToast('Link copied!'))
+    .catch(() => showToast('Copy failed','error'));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  REFERRALS
+// ═══════════════════════════════════════════════════════════
+async function loadReferrals() {
+  const { data } = await db.from('referrals').select(`*, patients(full_name), profiles(full_name)`).order('created_at',{ascending:false});
+  const c = document.getElementById('referrals-container');
+  if (!data) return;
+  c.innerHTML = data.map(r => `
+    <div class="p-4 rounded-xl border-l-4 ${r.urgency==='Emergency'?'border-red-500 bg-red-50 dark:bg-red-900/20':'border-blue-500 bg-white dark:bg-gray-800'} shadow-sm mb-3">
+      <div class="flex justify-between items-start">
+        <div><h4 class="font-bold">${r.patients?.full_name||'N/A'}</h4>
+          <p class="text-xs text-gray-500">By: ${r.profiles?.full_name||'Unknown'} → <strong>${r.target_department}</strong></p>
+        </div>
+        <span class="text-xs font-bold px-2 py-1 rounded ${r.urgency==='Emergency'?'bg-red-200 text-red-800':'bg-blue-100 text-blue-800'}">${r.urgency}</span>
+      </div>
+      <p class="text-sm mt-2">${r.notes||''}</p>
+      <div class="mt-3 flex gap-2 items-center border-t pt-2">
+        <span class="text-xs font-bold ${r.status==='Completed'?'text-green-600':'text-yellow-600'}">${r.status.toUpperCase()}</span>
+        ${r.status==='Submitted'?`<button onclick="updateRef('${r.id}','Completed')" class="ml-auto text-xs bg-green-500 text-white px-3 py-1 rounded">Acknowledge</button>`:''}
+      </div>
+    </div>`).join('');
+}
+async function updateRef(id, status) { await db.from('referrals').update({status}).eq('id',id); showToast('Referral updated'); loadReferrals(); }
+document.getElementById('referral-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const { data: p } = await db.from('patients').insert([{full_name:document.getElementById('ref-patient').value}]).select();
+  await db.from('referrals').insert([{
+    patient_id: p[0].id,
+    referring_user_id: currentUser.id,
+    target_department: document.getElementById('ref-dept').value,
+    urgency: document.getElementById('ref-urgency').value,
+    notes: document.getElementById('ref-notes').value,
+    status: 'Submitted'
+  }]);
+  showToast('Referral submitted'); e.target.reset(); loadReferrals();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  SYSTEM HEALTH
+// ═══════════════════════════════════════════════════════════
+function loadSysDash() {
+  if (sysChartInstance) sysChartInstance.destroy();
+  sysChartInstance = new Chart(document.getElementById('sysChart').getContext('2d'), {
+    type:'bar',
+    data:{labels:['00','04','08','12','16','20'],datasets:[{label:'API Requests',data:[120,80,450,890,760,300],backgroundColor:'#8b5cf6',borderRadius:6}]},
+    options:{responsive:true,plugins:{legend:{display:false}}}
+  });
+}
+
+document.getElementById('change-password-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button'); btn.innerText = 'Updating…';
+  const { error } = await db.auth.updateUser({password:document.getElementById('new-password').value});
+  if (!error) { showToast('Password updated'); e.target.reset(); }
+  else showToast(error.message,'error');
+  btn.innerText = 'Update Password';
+});
+
+// ═══════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════
+db.auth.getSession().then(({ data: { session } }) => { if (session) initApp(session.user); });
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const rawId = document.getElementById('login-id').value.trim();
+  const email = rawId.includes('@') ? rawId : `${rawId}@medconnect.com`;
+  document.getElementById('login-btn').innerText = 'Signing in…';
+  const { data, error } = await db.auth.signInWithPassword({email,password:document.getElementById('login-password').value});
+  if (error) {
+    document.getElementById('login-error').innerText = error.message;
+    document.getElementById('login-error').classList.remove('hidden');
+    document.getElementById('login-btn').innerText = 'Sign In →';
+  } else initApp(data.user);
+});
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  if (chatInterval) clearInterval(chatInterval);
+  await db.auth.signOut(); window.location.reload();
+});
+
+function openPatientRegister() { document.getElementById('patient-register-modal').classList.remove('hidden'); }
+function closePatientRegister() { document.getElementById('patient-register-modal').classList.add('hidden'); }
+document.getElementById('patient-register-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('reg-btn'), errEl = document.getElementById('reg-error');
+  errEl.classList.add('hidden'); btn.innerText = 'Creating…'; btn.disabled = true;
+  try {
+    const res = await fetch('/api/public/register-patient',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      fullName: document.getElementById('reg-name').value.trim(),
+      phone: document.getElementById('reg-phone').value.trim(),
+      password: document.getElementById('reg-pass').value
+    })});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showToast(data.message || 'Account created!');
+    closePatientRegister(); e.target.reset();
+  } catch(err) { errEl.innerText = err.message; errEl.classList.remove('hidden'); }
+  finally { btn.innerText = 'Create Account'; btn.disabled = false; }
+});
+
+async function initApp(user) {
+  try {
+    currentUser = user;
+    const { data: profile, error } = await db.from('profiles').select(`*, branches(name)`).eq('id',user.id).single();
+    if (error || !profile) { showToast('Failed to load profile','error'); return; }
+    userProfile = profile;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-screen').classList.remove('hidden');
+    document.getElementById('sidebar-name').innerText = profile.full_name || 'User';
+    document.getElementById('sidebar-role').innerText = (ROLE_LABELS[profile.role]||profile.role||'').toUpperCase().replace('_',' ');
+    document.getElementById('sidebar-avatar').innerText = (profile.full_name||'U').charAt(0).toUpperCase();
+    document.getElementById('sidebar-branch').innerText = profile.branches ? profile.branches.name : 'No Branch';
+    document.getElementById('dash-name').innerText = (profile.full_name||'User').split(' ')[0];
+    document.getElementById('feed-avatar').innerText = (profile.full_name||'U').charAt(0).toUpperCase();
+
+    const roleStr = String(profile.role).toLowerCase().replace(/\s+/g,'_');
+    document.getElementById('worker-nav-section').classList.remove('hidden');
+
+    if (roleStr === 'admin' || roleStr === 'super_admin') {
+      document.getElementById('sys-admin-nav-section').classList.remove('hidden');
+      switchTab('dashboard');
+    } else if (roleStr === 'branch_admin') {
+      document.getElementById('branch-admin-nav-section').classList.remove('hidden');
+      switchTab('users');
+    } else {
+      document.getElementById('clinical-extras-nav').classList.remove('hidden');
+      if (REFERRAL_ROLES.includes(roleStr)) document.getElementById('nav-referrals').style.display = '';
+      if (PATIENT_RECORD_ROLES.includes(roleStr)) document.getElementById('nav-patients').style.display = '';
+      if (SYMPTOM_ROLES.includes(roleStr)) document.getElementById('nav-symptom').style.display = '';
+      switchTab('workspace');
+    }
+
+    try { loadDashboard(); } catch(e) { console.error(e); }
+    try { loadFeed(); } catch(e) { console.error(e); }
+    try { renderEducationGrid(); } catch(e) { console.error(e); }
+    try { initNutrition(); } catch(e) { console.error(e); }
+  } catch(err) { console.error(err); showToast('Login error','error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EDUCATION HUB
+// ═══════════════════════════════════════════════════════════
+const educationData = [
+  {id:'nutrition',title:'Nutrition',img:'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400',desc:'Balanced diet'},
+  {id:'maternal',title:'Maternal',img:'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400',desc:'Pregnancy'},
+  {id:'hygiene',title:'Hygiene',img:'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400',desc:'Hand hygiene'},
+  {id:'vaccine',title:'Vaccines',img:'https://images.unsplash.com/photo-1611690817240-4b4bd4c8cbd0?w=400',desc:'Immunization'},
+  {id:'firstaid',title:'First Aid',img:'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400',desc:'Emergency care'}
+];
+function renderEducationGrid() {
+  document.getElementById('edu-grid').innerHTML = educationData.map(e => `
+    <div onclick="switchTab('nutrition')" class="edu-card bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border cursor-pointer transition">
+      <img src="${e.img}" class="w-full h-32 object-cover">
+      <div class="p-3"><h3 class="font-bold text-sm">${e.title}</h3><p class="text-xs text-gray-500">${e.desc}</p></div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>

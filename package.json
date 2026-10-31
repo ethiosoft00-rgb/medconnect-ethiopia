@@ -1,0 +1,15 @@
+{
+  "name": "medconnect-ethiopia",
+  "version": "1.0.0",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "hasab-sdk": "^1.1.3"
+  }
+}
